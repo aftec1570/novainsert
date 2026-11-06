@@ -1,6 +1,6 @@
 # NovaInsert User Manual
 
-Version 1.0.0 · November 2026 · REAPER-only VST3 hardware insert for macOS (Apple silicon)
+Version 1.0.0 · November 2026 · REAPER-only VST3 hardware insert for macOS (Apple silicon) · by Hillside Studios, [hillsidestudio.io](https://hillsidestudio.io)
 
 ![NovaInsert in REAPER](img/reaper_window.png)
 
@@ -406,3 +406,7 @@ The snapshot means a later edit of the library cannot change how an old project 
 NovaInsert is free to use, including in professional and commercial audio work. It is provided as is, without any warranty, and the author accepts no liability for damage to equipment, hearing or data. Commercial reuse of the source code or the GUI design requires prior consultation with the author. The full agreement is shown by the installer and shipped as LICENSE.md.
 
 Built with JUCE 8 and the VST3 SDK. VST is a trademark of Steinberg Media Technologies GmbH. REAPER is a trademark of Cockos Incorporated.
+
+## 21. About Hillside Studios
+
+NovaInsert is made by Hillside Studios. If you are interested in the studio and its work, visit [hillsidestudio.io](https://hillsidestudio.io).

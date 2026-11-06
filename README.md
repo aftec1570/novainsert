@@ -1,7 +1,7 @@
 # NovaInsert
 
 **A REAPER-only VST3 hardware insert for macOS (Apple silicon) that measures its own latency.**
-Version 1.0.0 · by Hillside Studios · free to use, provided as is without any warranty (see [License](#license)).
+Version 1.0.0 · by [Hillside Studios](https://hillsidestudio.io) · free to use, provided as is without any warranty (see [License](#license)).
 
 **[Download NovaInsert 1.0.0 (signed and notarized DMG)](https://github.com/aftec1570/novainsert/releases/latest)** ·
 [User manual](docs/manual/NovaInsert-User-Manual.md) ([PDF](docs/manual/NovaInsert-User-Manual.pdf))
@@ -302,6 +302,11 @@ Anyway"). Signed, notarized release build (the published DMG is built this way):
 Screenshots come from `tests/tools/manual_shots.cpp` (`ni_manual_shots docs/manual/img`, fixed view states at 2×, no
 hardware needed); the PDF is rebuilt with `python3 -I tools/manual_build.py docs/manual/NovaInsert-User-Manual.md
 docs/manual/NovaInsert-User-Manual.html docs/manual/NovaInsert-User-Manual.pdf` (headless Google Chrome, no other deps).
+
+## About Hillside Studios
+
+NovaInsert is made by Hillside Studios. If you are interested in the studio and its work, visit
+[hillsidestudio.io](https://hillsidestudio.io).
 
 ## License
 
