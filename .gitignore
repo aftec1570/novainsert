@@ -1,0 +1,6 @@
+build/
+build-*/
+dist/
+.DS_Store
+__pycache__/
+docs/manual/NovaInsert-User-Manual.html

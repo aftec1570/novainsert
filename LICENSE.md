@@ -18,7 +18,7 @@ SOFTWARE.**
   faces, controls, colour scheme, typography and the look and feel as a whole,
   whether rendered by the Software or expressed in the Source Code.
 - **"Licensor"** means the author and copyright holder of NovaInsert,
-  publishing as "aftec1570".
+  publishing as "Hillside Studios".
 - **"You"** means the individual or legal entity accepting this Agreement.
 - **"Commercial Reuse"** means incorporating the Source Code or the GUI, in
   whole or in substantial part, modified or unmodified, into any product,
@@ -171,4 +171,4 @@ Requests for consent to Commercial Reuse, questions about this Agreement and
 notices to the Licensor should be sent through the project's published
 repository or the contact address given with the Software distribution.
 
-Copyright © 2026 aftec1570. All rights reserved.
+Copyright © 2026 Hillside Studios. All rights reserved.

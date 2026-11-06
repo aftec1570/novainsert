@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<installer-gui-script minSpecVersion="2">
+    <title>NovaInsert @VERSION@</title>
+    <organization>com.hillsidestudios</organization>
+    <options customize="never" require-scripts="false" rootVolumeOnly="true" hostArchitectures="arm64"/>
+    <domains enable_localSystem="true"/>
+    <welcome file="welcome.html" mime-type="text/html"/>
+    <license file="LICENSE.txt" mime-type="text/plain"/>
+    <conclusion file="conclusion.html" mime-type="text/html"/>
+    <choices-outline>
+        <line choice="default">
+            <line choice="com.hillsidestudios.NovaInsert.vst3"/>
+        </line>
+    </choices-outline>
+    <choice id="default"/>
+    <choice id="com.hillsidestudios.NovaInsert.vst3" visible="false">
+        <pkg-ref id="com.hillsidestudios.NovaInsert.vst3"/>
+    </choice>
+    <pkg-ref id="com.hillsidestudios.NovaInsert.vst3" version="@VERSION@" onConclusion="none">NovaInsert-vst3.pkg</pkg-ref>
+</installer-gui-script>

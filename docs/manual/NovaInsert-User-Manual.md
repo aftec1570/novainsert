@@ -112,9 +112,13 @@ Two REAPER details worth knowing. Typing a space into the name field needs "Send
 | 13 | SETUP | (row below, left) converter alignment, 0 VU reference, channel offsets, editor size |
 | 14 | Status lines | calibration messages, the failure reason, warnings and tips |
 | 15 | Footer | time of the last measurement, the algorithm version and the plug-in version |
-| 16 | VU / TUBE / LED / TWIN | switches the meter area between the two VU faces and the three level-bar looks (chapter 7) |
+| 16 | VU / TUBE / LED / TWIN | switches the meter area between the two VU faces and the three level-bar looks (chapter 8) |
+| 17 | dBu / dBFS | the unit of both meters' readouts |
+| 18 | RE-CALIBRATION | (under SETUP) measures the loop again; available only after a failed calibration (chapter 7) |
 
 Each meter has a peak lamp in its upper right corner. The SEND strip has a PEAK lamp (the send reached −0.1 dBFS or more), the RETURN strip a CLIP lamp (a returned sample exceeded 0 dBFS). The readouts under the CAL buttons show the current level per channel: dBu for the send, dBFS for the return.
+
+**Hover tips.** Rest the mouse pointer on any control for a moment and a short tip says what it does. This works on the main page, in SETUP and in PRESET SETUP.
 
 ### Resizing
 
@@ -163,13 +167,22 @@ NovaInsert re-measures when the project loads (see "Opening a project" below), t
 
 ![Failed: no return](img/failed.png)
 
-A failed measurement names its cause. The most common: no signal came back (cable or channel number), the return clipped, the loop had two candidate delays (an echo or crosstalk from a neighbouring unit), or the return was too weak. Fix the cause and re-select the device, or change the buffer size and back, to measure again.
+A failed measurement names its cause. The most common: no signal came back (cable or channel number), the return clipped, the loop had two candidate delays (an echo or crosstalk from a neighbouring unit), or the return was too weak. Fix the cause and press RE-CALIBRATION to measure again.
 
 **Opening a project.** With "On project open: Measure the loop" ticked in SETUP (the default), every instance measures its loop when the project opens, one after another through the same queue as any other measurement, so a cable or patch change made while the project was closed is caught before you play. The latency saved with the project stays in reserve: if the measurement finally fails (after its retry) and the interface, channels, buffer size, routing and mode are still the ones the project was saved with, the instance runs on the saved latency instead of failing, and the status line says so:
 
 ![Measure on open failed: the saved latency is used](img/open_fallback.png)
 
-"Open check failed: <reason> — saved latency in use" means the return is aligned as it was when you saved, but this session could not confirm it. Fix the cause (the reason is the same as in the table in chapter 18) and re-select the device to measure again; a successful measurement clears the message. With the box unticked, a project reopens on its saved latency without any clicks, as long as nothing in that list changed; anything changed is always measured.
+"Open check failed: <reason> — saved latency in use" means the return is aligned as it was when you saved, but this session could not confirm it. Fix the cause (the reason is the same as in the table in chapter 18) and press RE-CALIBRATION to measure again; a successful measurement clears the message. With the box unticked, a project reopens on its saved latency without any clicks, as long as nothing in that list changed; anything changed is always measured.
+
+**RE-CALIBRATION.** The button under SETUP measures the loop again, through the same queue as any other measurement. It is available only when a calibration failed:
+
+- the instance is Failed (red lamp, the reason on the status line), or
+- the check on project open failed and the saved latency is running ("Open check failed … saved latency in use").
+
+![RE-CALIBRATION available after a failed open check](img/recalibrate.png)
+
+At any other time it is greyed out: a Locked instance with a good measurement needs no new one, and a measurement that is queued or running is not restarted. NovaInsert re-measures by itself for every change listed above. If the new measurement fails as well, the instance shows Failed with the new reason and the button stays available.
 
 **Changing the buffer size.** REAPER only allows the device page while the transport is stopped: stop, change the buffer size, play. Every instance re-measures for the new block size and locks again.
 
@@ -298,7 +311,9 @@ Hardware cannot run faster than real time, so a render through NovaInsert must b
 
 - Starting a render (master mix, stems, selected tracks, regions, the region matrix, a dry run) sets REAPER's render speed to realtime and restores your previous setting when the render ends or the dialog closes. If you changed the setting during the render, it is left alone and the editor says "Render speed left at <value>".
 - Before the render starts every active instance is checked. If one is not Locked, the render is refused and a message names the tracks. No file is written. Lock them, or bypass the instances you do not need, and render again.
-- Freeze, apply FX and the render queue cannot go through hardware and are refused while an instance is active.
+- Freeze (stereo, mono, multichannel) and render tracks to stem tracks (stereo, mono, multichannel) are realtime renders too: NovaInsert switches REAPER's "Limit apply FX/render stems to realtime" preference on for the action and puts your own setting back afterwards, and the same Locked check runs first.
+- **Apply FX to items is refused** while a NovaInsert instance is active. REAPER stops the audio interface during Apply FX, even at realtime speed, so the outboard gear cannot be part of the result and every instance would lose its calibration. A message says so; use Freeze or Render tracks to stem tracks instead.
+- The render queue cannot go through hardware (it renders a saved copy of the project) and is refused while an instance is active.
 
 ![The start gap and the lead-in tip](img/gap_tip.png)
 
@@ -368,7 +383,7 @@ The snapshot means a later edit of the library cannot change how an old project 
 | Measurement paused while recording | a measurement was due during recording | it resumes when recording stops |
 | Anticipative FX processing is on for this track | you re-enabled it | press RE-APPLY ANTICIPATIVE FX |
 | Audio device lost | REAPER lost the interface | reconnect; the instance re-measures when it returns |
-| Open check failed: <reason> — saved latency in use | the measurement on project open did not lock; the latency saved with the project is running | fix the cause named after the colon, then re-select the device |
+| Open check failed: <reason> — saved latency in use | the measurement on project open did not lock; the latency saved with the project is running | fix the cause named after the colon, then press RE-CALIBRATION |
 | Unvalidated host version <v> | REAPER is not one of the validated versions (7.83, 7.85) | informational; everything runs |
 | Device library: … | the JSON file is missing, unreadable, read-only or newer than this version | fix the file; nothing was overwritten |
 | SEND CAL: play the track — 3 s of it set to 0 VU = +4 dBu | SEND CAL is listening to the track | chapter 9 |
@@ -382,12 +397,12 @@ The snapshot means a later edit of the library cannot change how an old project 
 - Presets are stored by position: deleting one shifts the later ones in projects that have not been reopened since (chapter 4).
 - The first "loop length" samples of each play or render pass have no hardware return (chapter 13).
 - Effect mode alignment is driver-reported, not sample-measured.
-- Freeze, apply FX and the render queue are refused while an instance is active.
+- Apply FX to items and the render queue are refused while an instance is active (freeze and stem tracks render in realtime).
 - A change of the outboard's own settings after the calibration is not detected; the footer shows when the loop was measured.
 - Analog overload inside the outboard is not detectable.
 
 ## 20. License
 
-NovaInsert is free to use, including in professional and commercial audio work, and the source code is shared. It is provided as is, without any warranty, and the author accepts no liability for damage to equipment, hearing or data. Commercial reuse of the source code or the GUI design requires prior consultation with the author. The full agreement is shown by the installer and shipped as LICENSE.md.
+NovaInsert is free to use, including in professional and commercial audio work. It is provided as is, without any warranty, and the author accepts no liability for damage to equipment, hearing or data. Commercial reuse of the source code or the GUI design requires prior consultation with the author. The full agreement is shown by the installer and shipped as LICENSE.md.
 
 Built with JUCE 8 and the VST3 SDK. VST is a trademark of Steinberg Media Technologies GmbH. REAPER is a trademark of Cockos Incorporated.
