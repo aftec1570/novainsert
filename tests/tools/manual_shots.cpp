@@ -3,6 +3,7 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <cmath>
 #include <cstdio>
+#include "engine/version.hpp"
 #include "gui/main_panel.hpp"
 
 using namespace ni::gui;
@@ -60,7 +61,7 @@ ViewInputs base (bool stereo)
 std::string footer (const ViewInputs& in)
 {
     const auto vm = ViewModel::from (in);
-    return (vm.timestampText.empty() ? std::string ("not measured") : "measured " + vm.timestampText) + "  ·  algorithm v1  ·  0.1.0";
+    return (vm.timestampText.empty() ? std::string ("not measured") : "measured " + vm.timestampText) + "  ·  algorithm v1  ·  " + std::string (ni::engine::kVersion);
 }
 
 juce::Image body (MainPanel& p, const ViewInputs& in, int device, const Reading& s, const Reading& r)

@@ -5,6 +5,7 @@ import os, pathlib, plistlib, re, sys, unittest
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 BUNDLE = pathlib.Path(os.environ.get("NI_BUNDLE", ROOT / "build-release/src/NovaInsert_artefacts/Release/VST3/NovaInsert.vst3"))
 VENDOR, BUNDLE_ID = "Hillside Studios", "com.hillsidestudios.NovaInsert"
+VERSION = re.search(r'kVersion = "([^"]+)"', (ROOT / "src/engine/version.hpp").read_text()).group(1)
 CIDS = {"ABCDEF019182FAEB4E76696E4E766931", "ABCDEF011234ABCD4E76696E4E766931"}   # shipped since v0.1.0 — never change
 
 class PluginIdentity(unittest.TestCase):
@@ -14,6 +15,10 @@ class PluginIdentity(unittest.TestCase):
         self.assertEqual(set(re.findall(r'"Vendor": "([^"]*)"', self.info)), {VENDOR})
     def test_bundle_identifier(self):
         with open(BUNDLE / "Contents/Info.plist", "rb") as f: self.assertEqual(plistlib.load(f)["CFBundleIdentifier"], BUNDLE_ID)
+    def test_bundle_version_is_the_release_version(self):
+        self.assertEqual(VERSION, "1.0.0")
+        with open(BUNDLE / "Contents/Info.plist", "rb") as f: info = plistlib.load(f)
+        self.assertEqual((info["CFBundleShortVersionString"], info["CFBundleVersion"]), (VERSION, VERSION))
     def test_class_ids_unchanged_so_saved_projects_load(self):
         self.assertEqual(set(re.findall(r'"CID": "([0-9A-F]{32})"', self.info)), CIDS)
     def test_no_old_publisher_name_in_the_bundle(self):
