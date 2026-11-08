@@ -70,6 +70,17 @@ inline bool hostVersionValidated(const std::string& v)
     return false;
 }
 
+// The "Interface" line of PRESET SETUP and SETUP: the audio device as REAPER reports it (GetAudioDeviceInfo IDENT_IN /
+// IDENT_OUT), never a hardwired interface model (user 2026-11-08: "it should use the soundcard's name what REAPER reports").
+// REAPER does not report the analog level, so the dBu-at-0-dBFS values are typed in.
+inline std::string interfaceText(const std::string& identIn, const std::string& identOut)
+{
+    if (identIn.empty() && identOut.empty()) return "no audio device";
+    if (identOut.empty() || identOut == identIn) return identIn.empty() ? identOut : identIn;
+    if (identIn.empty()) return identOut;
+    return identIn + " / " + identOut;   // separate input and output devices
+}
+
 // One device library entry for the device list: inUseBy = the track of another instance owning any of its channels (or empty).
 struct DeviceListEntry
 {
@@ -81,6 +92,7 @@ struct DeviceListEntry
 struct ViewInputs
 {
     std::string deviceName, interfaceName, outName, inName;
+    std::string interfaceOutName;              // IDENT_OUT (interfaceName is IDENT_IN)
     engine::Mode mode = engine::Mode::Insert;
     engine::State state = engine::State::Idle;
     engine::Reason reason = engine::Reason::None;
@@ -98,6 +110,7 @@ struct ViewInputs
     engine::Reason openFallbackReason = engine::Reason::None;
     bool measureOnOpen = true;                 // SETUP toggle (global settings.json)
     int skin = 0;                              // SETUP skin: 0 Dark / 1 Ivory / 2 Silver (global settings.json, user 2026-11-06)
+    bool reverseWheel = false;                 // SETUP: trim knobs turn the other way on the mouse wheel (global, GitHub #1)
     std::string libraryWarning;                // first library load warning (missing/corrupt/read-only); empty = none
     std::string hostVersion;                   // GetAppVersion(), e.g. "7.83/macOS-arm64"; empty = unknown
     // Level CAL / VU (VU GUI spec 2026-11-02)

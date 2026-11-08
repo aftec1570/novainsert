@@ -46,6 +46,7 @@ NovaInsertEditor::NovaInsertEditor (NovaInsertProcessor& p) : juce::AudioProcess
     panel_.setup.onApplyDefaults = [this] { proc_.applyDeviceDefaults(); };
     panel_.setup.onSize = [this] (int pc) { setSizePercent (pc); };
     panel_.setup.onMeasureOnOpen = [this] (bool on) { proc_.setMeasureOnOpen (on); };
+    panel_.setup.onReverseWheel = [this] (bool on) { proc_.setReverseWheel (on); };
     panel_.setup.onSkin = [this] (int s) { proc_.setSkin (s); refreshSlow(); };
     panel_.devices.onSave = [this] (const ni::plugin::DeviceRecord& r) { return proc_.saveDevice (r); };
     panel_.devices.onDelete = [this] (const std::string& id) { return proc_.deleteDevice (id); };

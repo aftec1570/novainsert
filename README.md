@@ -1,9 +1,9 @@
 # NovaInsert
 
 **A REAPER-only VST3 hardware insert for macOS (Apple silicon) that measures its own latency.**
-Version 1.0.0 · by [Hillside Studios](https://hillsidestudio.io) · free to use, provided as is without any warranty (see [License](#license)).
+Version 1.0.1 · by [Hillside Studios](https://hillsidestudio.io) · free to use, provided as is without any warranty (see [License](#license)).
 
-**[Download NovaInsert 1.0.0 (signed and notarized DMG)](https://github.com/aftec1570/novainsert/releases/latest)** ·
+**[Download NovaInsert 1.0.1 (signed and notarized DMG)](https://github.com/aftec1570/novainsert/releases/latest)** ·
 [User manual](docs/manual/NovaInsert-User-Manual.md) ([PDF](docs/manual/NovaInsert-User-Manual.pdf))
 
 ![NovaInsert in REAPER](docs/manual/img/reaper_window.png)
@@ -61,8 +61,8 @@ You are responsible for the routing, the monitoring level and the hardware. See 
 
 ## Install
 
-1. Download `NovaInsert-1.0.0.dmg` from the [release page](https://github.com/aftec1570/novainsert/releases/latest).
-2. Open the DMG and double-click "Install NovaInsert 1.0.0.pkg".
+1. Download `NovaInsert-1.0.1.dmg` from the [release page](https://github.com/aftec1570/novainsert/releases/latest).
+2. Open the DMG and double-click "Install NovaInsert 1.0.1.pkg".
 3. Read and accept the license agreement; the installer copies the plug-in to `/Library/Audio/Plug-Ins/VST3`.
    The package is signed with an Apple Developer ID and notarized by Apple, so macOS opens it without a security prompt.
 4. In REAPER: Options → Preferences → Plug-ins → VST → "Re-scan". Add "VST3: NovaInsert (Hillside Studios)" to a track.
@@ -78,7 +78,7 @@ name you give a preset is what the device list and the FX slot in REAPER's mixer
 Open the editor, press PRESET SETUP, then NEW:
 
 1. **Name** — the preset name; it appears in the FX slot the moment the preset is saved.
-2. **Send** — MONO or STEREO, then the physical output channel(s), picked by the name REAPER reports ("3 · Apollo Out 3").
+2. **Send** — MONO or STEREO, then the physical output channel(s), picked by the name REAPER reports ("3 · Out 3").
    A mono send carries the average of the track's two channels on its one output.
 3. **Return** — MONO or STEREO, then the physical input channel(s). A mono return feeds both channels of the track.
 4. **Mode** — INSERT for compressors, equalisers and other gear that keeps timing; EFFECT for reverbs and delays.
@@ -170,8 +170,8 @@ outboard harder without changing the level of the mix.
 Most outboard expects line level around +4 dBu. A converter aligned to +24 dBu at 0 dBFS sends a full-scale DAW signal
 20 dB above that. The calibration solves this per device, once:
 
-1. **SETUP:** choose the interface preset ("Apollo x / +4 · 24.0", "Apollo Twin MkII · 20.2" or Custom, separately for
-   send and return) and the 0 VU reference you work with.
+1. **SETUP:** the Interface line shows the audio device REAPER runs; enter its dBu-at-0-dBFS values from the
+   interface's manual (separately for send and return, default +24.0) and the 0 VU reference you work with.
 2. Put the outboard in a neutral state: unity gain, EQ flat, compression off.
 3. **CAL +4 dBu (SEND CAL):** play the track and press the button. NovaInsert listens to 3 seconds of the track's own
    material (no tone, nothing muted) and sets SEND TRIM so its average leaves the converter at 0 VU = +4 dBu.
@@ -255,7 +255,7 @@ pass have no hardware return yet. NovaInsert reports the gap instead of hiding i
 | Re-apply anticipative FX fix | trigger | the same as the button |
 | State, Physical loop, Reported PDC, Inherent gap, CAL action, CAL status | read only | for scripts and controllers |
 
-## Limitations of version 1.0.0
+## Limitations of version 1.0.1
 
 - 48 kHz, REAPER 7.83 or newer (validated on 7.83 and 7.85), macOS Apple silicon, VST3 only.
 - Presets are stored by position: deleting one shifts the later ones in projects not reopened since.

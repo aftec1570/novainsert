@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NovaInsert versions</title>
+<style>
+:root{--bg:#16181b;--fg:#e9e4d6;--dim:#9a9488;--accent:#e0c27a;--line:#2c3036}
+@media (prefers-color-scheme: light){:root{--bg:#f7f4ec;--fg:#1d1f22;--dim:#5d5a53;--accent:#8a6a1f;--line:#ddd6c6}}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.55 -apple-system,BlinkMacSystemFont,"Helvetica Neue",sans-serif}
+main{max-width:760px;margin:0 auto;padding:32px 16px 64px}
+h1{font-size:28px;letter-spacing:.02em;margin:0 0 12px} h2{font-size:19px;margin:36px 0 8px;padding-top:16px;border-top:1px solid var(--line)}
+a{color:var(--accent)} code{font:14px ui-monospace,Menlo,monospace} li{margin:6px 0} p:first-of-type{color:var(--dim)}
+</style></head><body><main>
+<h1>NovaInsert — version history</h1>
+<p>Latest version: <strong>1.0.1</strong> · <a href="https://github.com/aftec1570/novainsert/releases/latest">Download the latest signed and notarized DMG</a> · <a href="https://github.com/aftec1570/novainsert/releases">All releases</a> · <a href="https://github.com/aftec1570/novainsert/blob/main/BUGS.md">Bug and fix ledger</a></p>
+<h2>1.0.1 — 2026-11-08</h2>
+<p>Bug-fix release. Projects, presets (<code>devices.json</code>) and settings from 1.0.0 load unchanged.</p>
+<ul>
+<li><strong>Fixed: mouse-wheel direction on the trim knobs could be reversed</strong> (<a href="https://github.com/aftec1570/novainsert/issues/1">#1</a>). Wheel up raises a trim, following the macOS scroll setting. A scroll utility that reverses only the mouse (Logi Options+, Mos, Scroll Reverser, LinearMouse…) leaves macOS's "natural scrolling" flag set, so the knobs turned backwards and no plug-in can detect that. New global option <strong>SETUP → Mouse wheel: Reverse</strong> turns them the other way.</li>
+<li><strong>Fixed: "Interface" in PRESET SETUP went back to Apollo when saving a Custom preset</strong> (<a href="https://github.com/aftec1570/novainsert/issues/2">#2</a>). The hardwired interface list (Apollo x, Apollo Twin MkII, Custom) is gone. PRESET SETUP and SETUP now show the audio device as REAPER reports it; the dBu-at-0-dBFS values are entered directly (default +24.0 dBu), since REAPER does not report a converter's analog level.</li>
+</ul>
+<h2>1.0.0 — 2026-11-06</h2>
+<p>First public release: REAPER-only VST3 hardware insert for macOS (Apple silicon) with automatic, sample-accurate round-trip latency measurement, device presets, mono/stereo routing per direction, VU and bar meters, level calibration (SEND CAL / RETURN CAL), Insert and Effect modes and automatic realtime rendering.</p>
+</main></body></html>

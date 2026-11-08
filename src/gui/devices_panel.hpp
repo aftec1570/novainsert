@@ -47,7 +47,8 @@ private:
     juce::TextButton newBtn_ { "NEW" }, dupBtn_ { "DUPLICATE" }, delBtn_ { "DELETE" }, save_ { "SAVE" }, cancel_ { "CANCEL" }, done_ { "DONE" };
     juce::TextEditor name_;
     Segment sendMode_ { { "MONO", "STEREO" } }, retMode_ { { "MONO", "STEREO" } }, mode_ { { "INSERT", "EFFECT" } };
-    juce::ComboBox outL_, outR_, inL_, inR_, preset_, ref_;
+    juce::ComboBox outL_, outR_, inL_, inR_, ref_;
+    std::string hostIn_, hostOut_;   // REAPER's audio device now (IDENT_IN / IDENT_OUT)
     juce::Slider sendDbu_, returnDbu_, refCustom_, outMax_;
     juce::ToggleButton outMaxOn_ { "Limit" };
 

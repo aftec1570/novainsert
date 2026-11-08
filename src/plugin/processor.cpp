@@ -895,6 +895,7 @@ ni::gui::ViewInputs NovaInsertProcessor::viewInputs() const
     const auto rec = activeRecord();
     if (rec) in.deviceName = rec->name;
     in.interfaceName = lastIdent_.substr (0, lastIdent_.find ('|'));
+    if (const auto bar = lastIdent_.find ('|'); bar != std::string::npos) in.interfaceOutName = lastIdent_.substr (bar + 1);
     const auto eff = effectivePair();
     auto chans = [&] (const char* what, const int* c, bool stereo) {
         if (c[0] < 0) return std::string ("\u2014");
@@ -925,6 +926,7 @@ ni::gui::ViewInputs NovaInsertProcessor::viewInputs() const
     in.openFallbackReason = openFallbackReason_;
     in.measureOnOpen = library_ ? library_->settings().measureOnOpen : true;
     in.skin = library_ ? library_->settings().skin : 0;
+    in.reverseWheel = library_ ? library_->settings().reverseWheel : false;
     if (library_ && ! library_->warnings().empty()) in.libraryWarning = library_->warnings().front();
     in.sendStereo = eff.sendStereo; in.retStereo = eff.retStereo;
     in.recSendStereo = pair_.sendStereo; in.recReturnStereo = pair_.retStereo;
@@ -974,6 +976,13 @@ void NovaInsertProcessor::setMeasureOnOpen (bool on)
     if (! library_) return;
     const bool ok = library_->setMeasureOnOpen (on);
     ni::host::DiagLog::get().text ("LIB", instNo_, "measureOnOpen=%d|saved=%d", on ? 1 : 0, ok ? 1 : 0);
+}
+
+void NovaInsertProcessor::setReverseWheel (bool on)
+{
+    if (! library_) return;
+    const bool ok = library_->setReverseWheel (on);
+    ni::host::DiagLog::get().text ("LIB", instNo_, "reverseWheel=%d|saved=%d", on ? 1 : 0, ok ? 1 : 0);
 }
 
 void NovaInsertProcessor::setSkin (int skin)

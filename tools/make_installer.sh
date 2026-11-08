@@ -79,5 +79,5 @@ if [ -n "${NI_NOTARY_PROFILE:-}" ]; then
     notarize "$DMG"
     spctl --assess --type install --verbose=1 "$PRODUCT" 2>&1 | tail -n 1   # expect "accepted  source=Notarized Developer ID"
 fi
-shasum -a 256 "$DMG" | tee "$DMG.sha256"
+(cd "$(dirname "$DMG")" && shasum -a 256 "$(basename "$DMG")") | tee "$DMG.sha256"
 echo "installer: $DMG"

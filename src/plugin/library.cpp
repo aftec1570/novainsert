@@ -252,6 +252,7 @@ DeviceLibrary::LoadStatus DeviceLibrary::load()
         settings_.diagnosticsDir = str(s, "diagnosticsDir");
         settings_.measureOnOpen = static_cast<bool>(s.getProperty("measureOnOpen", true));
         settings_.skin = skinOf(s);
+        settings_.reverseWheel = static_cast<bool>(s.getProperty("reverseWheel", false));
     }
     juce::var c; std::string cerr;
     const Read cr = readJson(dir_ / "calibrations.json", c, cerr);
@@ -324,6 +325,7 @@ void DeviceLibrary::reloadSettings()
     if (readJson(dir_ / "settings.json", s, err) != Read::Ok) return;
     settings_.measureOnOpen = static_cast<bool>(s.getProperty("measureOnOpen", true));
     settings_.skin = skinOf(s);
+    settings_.reverseWheel = static_cast<bool>(s.getProperty("reverseWheel", false));
 }
 
 bool DeviceLibrary::writeSetting(const char* key, int value, bool asBool, const std::string& what)
@@ -345,6 +347,13 @@ bool DeviceLibrary::setMeasureOnOpen(bool on)
 {
     if (!writeSetting("measureOnOpen", on ? 1 : 0, true, "measure on open")) return false;
     settings_.measureOnOpen = on;
+    return true;
+}
+
+bool DeviceLibrary::setReverseWheel(bool on)
+{
+    if (!writeSetting("reverseWheel", on ? 1 : 0, true, "mouse wheel direction")) return false;
+    settings_.reverseWheel = on;
     return true;
 }
 

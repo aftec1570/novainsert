@@ -341,3 +341,13 @@ TEST_CASE("measure_request_from_failed_only_for_the_user_recalibration")
         REQUIRE_FALSE(measureRequestAllowed(s, Reason::UserRequest));
     REQUIRE(ni::gui::reasonText(Reason::UserRequest) == "Re-calibration requested");
 }
+
+TEST_CASE("view_model_interface_text_is_the_device_reaper_reports")
+{
+    // user 2026-11-08: no hardwired interface model; the Interface line shows REAPER's IDENT_IN / IDENT_OUT
+    REQUIRE(interfaceText("BlackHole 64ch", "BlackHole 64ch") == "BlackHole 64ch");
+    REQUIRE(interfaceText("BlackHole 64ch", "") == "BlackHole 64ch");
+    REQUIRE(interfaceText("", "MOTU 828") == "MOTU 828");
+    REQUIRE(interfaceText("RME in", "RME out") == "RME in / RME out");
+    REQUIRE(interfaceText("", "") == "no audio device");
+}

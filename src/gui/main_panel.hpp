@@ -24,6 +24,15 @@ class TrimKnob final : public juce::Slider
 public:
     std::function<double (double)> onUser;    // limit + move the LINK partner (drag, wheel)
     std::function<double (double)> onLimit;   // limit only (double-click: the processor's LINK moves the partner, inside the room)
+    bool reverseWheel = false;                // SETUP "Mouse wheel: reverse" (GitHub #1)
+    void mouseWheelMove (const juce::MouseEvent& e, const juce::MouseWheelDetails& w) override
+    {   // JUCE turns the knob up for a wheel moved up, using macOS's "natural scrolling" flag on the event. A scroll utility
+        // (Logi Options+, Mos, Scroll Reverser, LinearMouse...) that reverses only the mouse leaves that flag set, so the knob
+        // runs backwards and no plugin can tell; the global SETUP option flips it back.
+        auto d = w;
+        if (reverseWheel) { d.deltaX = -d.deltaX; d.deltaY = -d.deltaY; }
+        juce::Slider::mouseWheelMove (e, d);
+    }
     double snapValue (double attempted, DragMode) override
     {
         const double v = std::round (attempted * 10.0) / 10.0;

@@ -560,3 +560,27 @@ TEST_CASE("effective_pair_narrows_a_stereo_direction_to_one_side")
     p = effectivePair(m, SideSel::R, SideSel::L);
     REQUIRE_FALSE(p.sendStereo); REQUIRE(p.out[0] == 86); REQUIRE(p.out[1] == -1); REQUIRE_FALSE(p.retStereo); REQUIRE(p.in[0] == 84);
 }
+
+TEST_CASE("settings_reverse_wheel_defaults_off_persists_and_is_shared")
+{
+    // GitHub #1: global SETUP option for mice reversed by a scroll utility
+    const auto d = tempDir("settings_wheel");
+    DeviceLibrary a(d), b(d);
+    a.load(); b.load();
+    REQUIRE_FALSE(a.settings().reverseWheel);   // absent file → follow the system
+    REQUIRE(a.setReverseWheel(true));
+    REQUIRE(a.settings().reverseWheel);
+    REQUIRE(a.setSkin(1));                      // other keys kept both ways
+    b.reloadSettings();
+    REQUIRE(b.settings().reverseWheel);
+    REQUIRE(b.settings().skin == 1);
+    DeviceLibrary c(d);
+    c.load();
+    REQUIRE(c.settings().reverseWheel);
+    REQUIRE(c.setReverseWheel(false));
+    c.reloadSettings();
+    REQUIRE_FALSE(c.settings().reverseWheel);
+    REQUIRE(c.settings().skin == 1);
+    writeFile(d / "settings.json", "{ broken");
+    REQUIRE_FALSE(c.setReverseWheel(true));    // a corrupt file is never overwritten
+}

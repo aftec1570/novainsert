@@ -251,6 +251,7 @@ void MainPanel::update (const ViewInputs& source, int selectedDevice, const std:
     returnCal.setToggleState (in.calStatus == 2 || in.calStatus == 3, juce::dontSendNotification);
     reapply.setVisible (vm_.showReapplyAnticipative);
     recalibrate.setEnabled (vm_.recalibrateEnabled);
+    sendTrim.reverseWheel = returnTrim.reverseWheel = in.reverseWheel;
     setup.setValues (in, sizePercent_);
     devices.setInputs (in, selectedDevice);
 

@@ -5,9 +5,7 @@ namespace ni::gui
 {
 namespace
 {
-constexpr int kPresetApollo = 1, kPresetTwin = 2, kPresetCustom = 3;
 constexpr int kRef20 = 1, kRef18 = 2, kRefCustom = 3;
-constexpr float kApolloDbu = 24.0f, kTwinMk2Dbu = 20.2f;
 constexpr int kPad = 22, kListW = 214, kFormX = 258, kLabelW = 104, kCtlX = kFormX + kLabelW, kRow = 28, kTop = 42, kHalf = 164;
 constexpr int kModeW = 118, kChanX = kCtlX + kModeW + 10, kChanW = 100;   // Send / Return rows: [MONO|STEREO] + one or two channel pickers
 constexpr int kCapS = 38, kCapR = 46;   // dBu row: caption widths ("send" / "return") left of the two fields
@@ -73,26 +71,13 @@ DevicesPanel::DevicesPanel()
     addAndMakeVisible (retMode_);
     addAndMakeVisible (mode_);
 
-    for (auto* c : { &outL_, &outR_, &inL_, &inR_, &preset_, &ref_ })
+    for (auto* c : { &outL_, &outR_, &inL_, &inR_, &ref_ })
     {
         c->getProperties().set ("small", true);
         c->setTextWhenNothingSelected (juce::String::fromUTF8 ("choose\xe2\x80\xa6"));
         addAndMakeVisible (c);
     }
     for (auto* c : { &outL_, &outR_, &inL_, &inR_ }) c->onChange = [this] { changed(); };
-    preset_.addItem (juce::String::fromUTF8 ("Apollo x / +4 \xc2\xb7 24.0"), kPresetApollo);
-    preset_.addItem (juce::String::fromUTF8 ("Apollo Twin MkII \xc2\xb7 20.2"), kPresetTwin);
-    preset_.addItem ("Custom", kPresetCustom);
-    preset_.onChange = [this] {
-        if (loading_) return;
-        const int id = preset_.getSelectedId();
-        if (id != kPresetCustom)
-        {
-            const double v = id == kPresetApollo ? kApolloDbu : kTwinMk2Dbu;
-            sendDbu_.setValue (v, juce::dontSendNotification); returnDbu_.setValue (v, juce::dontSendNotification);
-        }
-        changed();
-    };
     ref_.addItem (juce::String (juce::CharPointer_UTF8 ("\xe2\x88\x92" "20 dBFS")), kRef20);
     ref_.addItem (juce::String (juce::CharPointer_UTF8 ("\xe2\x88\x92" "18 dBFS")), kRef18);
     ref_.addItem ("Custom", kRefCustom);
@@ -108,13 +93,6 @@ DevicesPanel::DevicesPanel()
     setupNumberSlider (refCustom_, -30.0, -6.0, 0.5, "dBFS");
     setupNumberSlider (outMax_, 0.0, 30.0, 0.5, "dBu");
     for (auto* s : { &sendDbu_, &returnDbu_, &refCustom_, &outMax_ }) { s->onValueChange = [this] { changed(); }; addAndMakeVisible (s); }
-    sendDbu_.onValueChange = returnDbu_.onValueChange = [this] {
-        if (loading_) return;
-        const bool apollo = near (sendDbu_.getValue(), kApolloDbu) && near (returnDbu_.getValue(), kApolloDbu);
-        const bool twin = near (sendDbu_.getValue(), kTwinMk2Dbu) && near (returnDbu_.getValue(), kTwinMk2Dbu);
-        preset_.setSelectedId (apollo ? kPresetApollo : twin ? kPresetTwin : kPresetCustom, juce::dontSendNotification);
-        changed();
-    };
     outMaxOn_.onClick = [this] { outMax_.setEnabled (outMaxOn_.getToggleState()); changed(); };
     addAndMakeVisible (outMaxOn_);
     beginNew();
@@ -135,7 +113,6 @@ DevicesPanel::DevicesPanel()
     outR_.setTooltip ("Send output, right");
     inL_.setTooltip ("Return input (left or mono)");
     inR_.setTooltip ("Return input, right");
-    preset_.setTooltip ("Interface preset: the converter alignment of a known interface, or Custom");
     sendDbu_.setTooltip ("Send: dBu at 0 dBFS on the output");
     returnDbu_.setTooltip ("Return: dBu at 0 dBFS on the input");
     ref_.setTooltip ("0 VU reference for the RETURN meter");
@@ -182,9 +159,6 @@ void DevicesPanel::loadForm (const plugin::DeviceRecord& r)
     inR_.setTextWhenNothingSelected (juce::String::fromUTF8 ("input R\xe2\x80\xa6"));
     sendDbu_.setValue (r.sendDbuAt0dBFS, juce::dontSendNotification);
     returnDbu_.setValue (r.returnDbuAt0dBFS, juce::dontSendNotification);
-    preset_.setSelectedId (near (r.sendDbuAt0dBFS, kApolloDbu) && near (r.returnDbuAt0dBFS, kApolloDbu) ? kPresetApollo
-                           : near (r.sendDbuAt0dBFS, kTwinMk2Dbu) && near (r.returnDbuAt0dBFS, kTwinMk2Dbu) ? kPresetTwin : kPresetCustom,
-                           juce::dontSendNotification);
     const int refId = near (r.vuRefDbfs, -20.0) ? kRef20 : near (r.vuRefDbfs, -18.0) ? kRef18 : kRefCustom;
     ref_.setSelectedId (refId, juce::dontSendNotification);
     refCustom_.setValue (r.vuRefDbfs, juce::dontSendNotification);
@@ -214,6 +188,7 @@ void DevicesPanel::setError (const std::string& e) { if (e != error_) { error_ =
 void DevicesPanel::setInputs (const ViewInputs& in, int selectedDevice)
 {
     running_ = selectedDevice;
+    if (in.interfaceName != hostIn_ || in.interfaceOutName != hostOut_) { hostIn_ = in.interfaceName; hostOut_ = in.interfaceOutName; repaint(); }
     if (in.outChannelNames != outNames_ || in.inChannelNames != inNames_)
     {
         outNames_ = in.outChannelNames; inNames_ = in.inChannelNames;
@@ -292,7 +267,6 @@ void DevicesPanel::resized()
     retMode_.setBounds (row (kCtlX, 2, kModeW).withHeight (24));
     inL_.setBounds (row (kChanX, 2, kChanW)); inR_.setBounds (row (kChanX + kChanW + 8, 2, kChanW));
     mode_.setBounds (row (kCtlX, 3, mode_.idealWidth()).withHeight (24));
-    preset_.setBounds (row (kCtlX, 4, 2 * kHalf + 8));
     // dBu row: the "send" / "return" captions sit inside the row, left of each field (the 4 pt row gap has no room above)
     sendDbu_.setBounds (row (kCtlX + kCapS, 5, kHalf - kCapS)); returnDbu_.setBounds (row (kCtlX + kHalf + 8 + kCapR, 5, kHalf - kCapR));
     ref_.setBounds (row (kCtlX, 6, kHalf)); refCustom_.setBounds (row (kCtlX + kHalf + 8, 6, kHalf));
@@ -341,6 +315,13 @@ void DevicesPanel::paint (juce::Graphics& g)
     label (2, "Return");
     label (3, "Mode");
     label (4, "Interface");
+    {   // the audio device the preset's channels belong to (saved with it), else the one REAPER runs now; read-only
+        const bool own = ! edit_.identIn.empty();
+        const juce::String iface (interfaceText (own ? edit_.identIn : hostIn_, own ? edit_.identOut : hostOut_));
+        g.setColour (ink::cream);
+        g.drawFittedText (iface, kCtlX, kTop + 4 * kRow, 2 * kHalf + 8, 24, juce::Justification::centredLeft, 1, 0.8f);
+        g.setFont (uiFont (12.5f));
+    }
     label (5, "dBu at 0 dBFS");
     label (6, "0 VU reference");
     label (7, "Outboard max");

@@ -84,6 +84,7 @@ public:
     void pollLibrary();                                       // ≤ 1 Hz from the editor: devices.json re-read, host channel names
     void setMeasureOnOpen (bool on);                          // SETUP: global (settings.json), read by every instance on project open
     void setSkin (int skin);                                  // SETUP: global GUI skin (settings.json), every open editor follows
+    void setReverseWheel (bool on);                           // SETUP: global trim-knob wheel direction (settings.json)
 
 private:
     void timerCallback() override;

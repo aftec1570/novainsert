@@ -45,7 +45,7 @@ ViewInputs base (bool stereo)
 {
     ViewInputs in;
     in.deviceName = stereo ? "Pultec EQP-1A" : "1176 LN";
-    in.interfaceName = "Apollo x16";
+    in.interfaceName = "CoreAudio Studio Interface";
     in.outName = stereo ? "Out 11/12" : "Out 11";
     in.inName = stereo ? "In 9/10" : "In 9";
     in.state = ni::engine::State::Locked;
@@ -221,7 +221,7 @@ int main (int argc, char** argv)
 
     {   // DEVICES page: the running preset's record in the form, host channel names in the pickers
         auto dv = base (true);
-        for (int i = 0; i < 16; ++i) { dv.outChannelNames.push_back ("Apollo Out " + std::to_string (i + 1)); dv.inChannelNames.push_back ("Apollo In " + std::to_string (i + 1)); }
+        for (int i = 0; i < 16; ++i) { dv.outChannelNames.push_back ("Output " + std::to_string (i + 1)); dv.inChannelNames.push_back ("Input " + std::to_string (i + 1)); }
         auto rec = [] (const char* id, const char* name, bool stereo, int o0, int o1, int i0, int i1) {
             ni::plugin::DeviceRecord r; r.id = id; r.name = name; r.sendStereo = r.returnStereo = stereo; r.out[0] = o0; r.out[1] = o1; r.in[0] = i0; r.in[1] = i1; return r; };
         dv.records = { rec ("1176-ln", "1176 LN", false, 10, -1, 8, -1), rec ("pultec-eqp-1a", "Pultec EQP-1A", true, 10, 11, 8, 9),

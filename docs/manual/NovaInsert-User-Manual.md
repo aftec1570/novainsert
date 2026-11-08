@@ -1,12 +1,12 @@
 # NovaInsert User Manual
 
-Version 1.0.0 · November 2026 · REAPER-only VST3 hardware insert for macOS (Apple silicon) · by Hillside Studios, [hillsidestudio.io](https://hillsidestudio.io)
+Version 1.0.1 · November 2026 · REAPER-only VST3 hardware insert for macOS (Apple silicon) · by Hillside Studios, [hillsidestudio.io](https://hillsidestudio.io)
 
 ![NovaInsert in REAPER](img/reaper_window.png)
 
 NovaInsert puts a piece of outboard gear into a REAPER track like any other plug-in. It sends the track to a physical output of your audio interface, takes the return from a physical input, measures the exact round-trip delay through the converters, cables and the device itself, and tells REAPER that delay so the return lines up to the sample. It also keeps the analog levels where the outboard expects them, with VU meters, trims and a one-press level calibration.
 
-This manual covers version 1.0.0. The plug-in is free to use and comes as is, without any warranty. Read the safety notice in chapter 2 before you connect anything.
+This manual covers version 1.0.1. The plug-in is free to use and comes as is, without any warranty. Read the safety notice in chapter 2 before you connect anything.
 
 ## 1. What NovaInsert does
 
@@ -43,7 +43,7 @@ You are responsible for the routing, the monitoring level and the hardware. See 
 
 **Install from the DMG**
 
-1. Open the DMG and double-click "Install NovaInsert 1.0.0.pkg".
+1. Open the DMG and double-click "Install NovaInsert 1.0.1.pkg".
 2. Read and accept the license agreement, then let the installer copy the plug-in to `/Library/Audio/Plug-Ins/VST3`.
 3. The package is signed with an Apple Developer ID and notarized by Apple, so macOS opens it directly without a security prompt.
 4. In REAPER open Options, Preferences, Plug-ins, VST and press "Re-scan". Add "VST3: NovaInsert" to a track.
@@ -57,7 +57,7 @@ A device is a preset: a name, a mono or stereo send with its output channel(s), 
 Open the editor (any instance), press PRESET SETUP and then NEW:
 
 1. **Name** — type the preset name. It appears in the FX slot the moment the preset is saved.
-2. **Send** — MONO or STEREO, then the physical output channel(s) of the audio interface, picked by the name REAPER reports for them ("3 · Apollo Out 3"). A mono send shows one picker; the signal that leaves on it is the average of the track's two channels, so a mono unit never needs two outputs.
+2. **Send** — MONO or STEREO, then the physical output channel(s) of the audio interface, picked by the name REAPER reports for them ("3 · Out 3"). A mono send shows one picker; the signal that leaves on it is the average of the track's two channels, so a mono unit never needs two outputs.
 3. **Return** — MONO or STEREO, then the physical input channel(s) the return arrives on. A mono return shows one picker; what comes back on it feeds both channels of the track.
 4. Send and return are independent: a mono-in, stereo-out unit is a mono send with a stereo return.
 5. **Mode** — INSERT for compressors, equalisers and other gear that keeps timing; EFFECT for reverbs and delays (chapter 11).
@@ -83,7 +83,7 @@ The presets live in a small JSON file in REAPER's resource path and can still be
 | `in` | physical input channel(s), counted from 0 |
 | `mode` | `0` Insert, `1` Effect |
 | `vuRefDbfs` | the 0 VU reference of the RETURN meter, default −20 |
-| `sendDbuAt0dBFS`, `returnDbuAt0dBFS` | converter alignment in dBu, default 24 (Apollo at the +4 reference) |
+| `sendDbuAt0dBFS`, `returnDbuAt0dBFS` | converter alignment in dBu, default 24 |
 | `outboardMaxInDbu` | optional, the unit's maximum input level, shown as a marker on the SEND scale |
 | `sendTrimDb`, `returnTrimDb`, `link`, `sendOffsetDb`, `returnOffsetDb` | the device defaults the level calibration writes (chapter 9) |
 
@@ -229,13 +229,13 @@ All three looks read the same way:
 
 Most outboard expects line level around +4 dBu. A converter aligned to +24 dBu at 0 dBFS sends a full-scale DAW signal 20 dB above that, which overloads the unit's input, and the unit's output can in turn overload the converter on the way back. The calibration solves this per device, once.
 
-**Step 1: set the converter alignment in SETUP.** Open SETUP and choose the interface preset: "Apollo x / +4 · 24.0", "Apollo Twin MkII · 20.2", or Custom with the dBu-at-0-dBFS values from your interface's manual, separately for the send (D/A) and the return (A/D). Choose the 0 VU reference you work with. If the unit has a known maximum input level, enable "Limit" and enter it: the SEND meter then shows a marker you should stay under.
+**Step 1: set the converter alignment in SETUP.** Open SETUP; the Interface line shows the audio device REAPER runs. Enter the dBu-at-0-dBFS values from your interface's manual, separately for the send (D/A) and the return (A/D); REAPER does not report the analog level, so it cannot be filled in for you. The default is +24.0 dBu. Choose the 0 VU reference you work with. If the unit has a known maximum input level, enable "Limit" and enter it: the SEND meter then shows a marker you should stay under.
 
 **Step 2: put the outboard in a neutral state.** Bypass or flatten the unit: unity gain, EQ flat, compression off. The calibration assumes the signal comes back at the level it went out.
 
 ![SEND CAL running](img/send_cal.png)
 
-**Step 3: SEND CAL.** Play the track and press "CAL +4 dBu". NovaInsert listens to the track's own material as it leaves the converter (nothing is muted, no tone is played), averages 3 seconds of it, and sets SEND TRIM so that this average sits at 0 VU = +4 dBu at the converter output. With a +24 dBu alignment that is −20 dBFS; with a +20 dBu Apollo headroom setting it is −16 dBFS. Silence does not count: press CAL before playback and it waits for the music (up to 30 seconds). Moving the trim while it listens does not spoil the result. Press the button again to cancel. With LINK on, the return trim moves by the opposite amount, so the level of the mix stays the same while the outboard is driven at +4 dBu. SEND CAL belongs to the track: it does not change the device's stored defaults. It also works in Effect mode.
+**Step 3: SEND CAL.** Play the track and press "CAL +4 dBu". NovaInsert listens to the track's own material as it leaves the converter (nothing is muted, no tone is played), averages 3 seconds of it, and sets SEND TRIM so that this average sits at 0 VU = +4 dBu at the converter output. With a +24 dBu alignment that is −20 dBFS; with a +20 dBu alignment it is −16 dBFS. Silence does not count: press CAL before playback and it waits for the music (up to 30 seconds). Moving the trim while it listens does not spoil the result. Press the button again to cancel. With LINK on, the return trim moves by the opposite amount, so the level of the mix stays the same while the outboard is driven at +4 dBu. SEND CAL belongs to the track: it does not change the device's stored defaults. It also works in Effect mode.
 
 ![RETURN CAL finished](img/return_cal_done.png)
 
@@ -255,7 +255,7 @@ CAL is refused, with a message, while recording, without an owned device, and wh
 
 | Field | Meaning |
 |---|---|
-| Interface preset | Apollo x / +4 (24.0 dBu), Apollo Twin MkII (20.2 dBu) or Custom |
+| Interface | the audio device as REAPER reports it (read-only) |
 | Send: dBu at 0 dBFS | the analog level at full scale on the output the device uses |
 | Return: dBu at 0 dBFS | the same for the input |
 | 0 VU reference | −20 dBFS, −18 dBFS or a custom value from −30 to −6 dBFS; the RETURN meter and the CAL maths follow it |
@@ -263,10 +263,11 @@ CAL is refused, with a message, while recording, without an owned device, and wh
 | Channel offsets | per-channel fine trims in 0.1 dB steps for L and R on the send and the return, on top of the main trims; the R rows are enabled for a stereo send / return |
 | Skin | DARK (default), IVORY or SILVER: the colour scheme of the whole editor (below). One setting for all instances, stored in `settings.json`; every open editor follows within a second |
 | Editor size | 75, 100, 125 or 150 % |
+| Mouse wheel: Reverse | turns the trim knobs the other way on the mouse wheel. By default wheel up raises a trim, following the macOS scroll setting; tick this if your mouse's direction is set by a utility (Logi Options+, Mos, Scroll Reverser, LinearMouse…) and the knobs turn backwards. One setting for all instances, stored in `settings.json` |
 | On project open | ticked (default): every instance measures its loop when a project opens and falls back to the latency saved with the project if that fails; unticked: a project reopens on its saved latency without measuring (chapter 7). One setting for all instances, stored in `settings.json` |
 | APPLY DEVICE DEFAULTS | takes the library record's trims, LINK and offsets into this instance; shown when they differ |
 
-Changes are applied immediately and stored in the device record (On project open, Skin and Editor size are global, not per device). DONE closes the page.
+Changes are applied immediately and stored in the device record (On project open, Skin, Mouse wheel and Editor size are global, not per device). DONE closes the page.
 
 ### Skins
 
@@ -360,7 +361,7 @@ These appear in REAPER's parameter list, for automation, modulation and paramete
 |---|---|
 | `…/REAPER/NovaInsert/devices.json` | the device presets, chapter 4 |
 | `…/REAPER/NovaInsert/calibrations.json` | measured loops, one per interface, channels, buffer size, routing and mode; written after every lock |
-| `…/REAPER/NovaInsert/settings.json` | global settings; SETUP writes "measureOnOpen" and "skin" (0 Dark, 1 Ivory, 2 Silver) here |
+| `…/REAPER/NovaInsert/settings.json` | global settings; SETUP writes "measureOnOpen", "skin" (0 Dark, 1 Ivory, 2 Silver) and "reverseWheel" here |
 | the REAPER project | the instance's full configuration plus a snapshot of its device record and calibration |
 
 The snapshot means a later edit of the library cannot change how an old project sounds. When a project's snapshot differs from the library, the editor says so ("The library record differs from this project's snapshot (kept)") and keeps the project's values. Back up the two JSON files with your templates; nothing else is written anywhere.
@@ -391,7 +392,7 @@ The snapshot means a later edit of the library cannot change how an old project 
 | Loop gain outside the trim range | the return differs from the send by more than the trims can correct | check the unit's gain structure |
 | CAL needs Insert mode / is not available while recording / Select a free device first / Wait for the latency measurement | CAL preconditions | see chapter 9 |
 
-## 19. Limitations of version 1.0.0
+## 19. Limitations of version 1.0.1
 
 - 48 kHz, REAPER 7.83 or newer (validated on 7.83 and 7.85), macOS Apple silicon, VST3 only.
 - Presets are stored by position: deleting one shifts the later ones in projects that have not been reopened since (chapter 4).

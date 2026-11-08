@@ -81,6 +81,8 @@ struct Settings
     std::string diagnosticsDir;
     bool measureOnOpen = true;   // every instance measures its loop when a project opens; the saved snapshot is the fallback (user 2026-11-06)
     int skin = 0;                // GUI skin, global: 0 Dark / 1 Ivory / 2 Silver; anything else reads as Dark (user 2026-11-06)
+    bool reverseWheel = false;   // SETUP: turn the trim knobs the other way on the mouse wheel (GitHub #1: a scroll utility that
+                                 // reverses the mouse leaves macOS's "natural" flag set, so the knob follows the wrong direction)
 };
 
 // Channel names the host reports for a record's channels ([0]/[1] = L/R; empty when unknown or mono R) — part of the key, so a
@@ -117,6 +119,7 @@ public:
     Settings settings() const noexcept { return settings_; }
     bool setMeasureOnOpen(bool on);
     bool setSkin(int skin);           // SETUP skin selector: same atomic, keep-other-keys write as setMeasureOnOpen
+    bool setReverseWheel(bool on);    // SETUP mouse-wheel direction: same write as setMeasureOnOpen
     void reloadSettings();            // ≤ 1 Hz from the editor poll: picks up measureOnOpen / skin set by another instance; a broken file keeps the last value   // SETUP toggle: settings.json rewritten atomically, other keys kept; false = not written (warning added)
     const std::vector<std::string>& warnings() const noexcept { return warnings_; }
     const std::filesystem::path& dir() const noexcept { return dir_; }
