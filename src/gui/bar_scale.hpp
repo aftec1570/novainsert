@@ -23,7 +23,7 @@ inline std::vector<DbuTick> dbuTicks(float dbuAt0dBFS)
     for (float dbu : { -30.0f, -24.0f, -18.0f, -12.0f, -6.0f, 0.0f, 4.0f, 12.0f, 18.0f, 24.0f })
     {
         const float dbfs = dbu - dbuAt0dBFS;
-        if (dbfs >= kBarMinDb - 1e-4f && dbfs <= kBarMaxDb + 1e-4f) out.push_back({ dbu, dbfs, dbu == 4.0f });
+        if (dbfs >= kBarMinDb - 1e-4f && dbfs <= kBarMaxDb + 1e-4f) out.push_back({ dbu, dbfs, dbu > 3.5f && dbu < 4.5f });   // the +4 dBu tick (no float ==)
     }
     return out;
 }

@@ -29,7 +29,8 @@ public:
     static double now() noexcept;   // monotonic seconds
 
     // Reads "diagnostics": true / "diagnosticsDir": "<path>" / "maxConcurrentProbes" from settings.json (key scan, no parser).
-    struct Settings { bool diagnostics = false; std::string dir; int maxConcurrentProbes = 0; };   // 0 = unlimited (F1 §11)
+    // maxConcurrentProbes 0 = unlimited (F1 §11); allowAnyDriver lets an unsupported driver through (test setups only)
+    struct Settings { bool diagnostics = false; std::string dir; int maxConcurrentProbes = 0; bool allowAnyDriver = false; };
     static Settings probeSettings(const std::string& settingsPath);
 
 private:

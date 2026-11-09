@@ -1,5 +1,6 @@
 // ViewModel (plan Task 25, F1 §12): state text + colour, physLoop/PDC texts, warnings, lead-in hint, failure reason strings.
 #include <catch2/catch_test_macros.hpp>
+#include <algorithm>
 #include <set>
 #include "gui/view_model.hpp"
 
@@ -82,14 +83,14 @@ TEST_CASE("view_model_lead_in_hint")
 TEST_CASE("view_model_failure_reason_text_for_every_reason")
 {
     std::set<std::string> seen;
-    for (int r = static_cast<int>(Reason::ProjectLoad); r <= static_cast<int>(Reason::UserRequest); ++r)
+    for (int r = static_cast<int>(Reason::ProjectLoad); r <= static_cast<int>(Reason::DriverUnsupported); ++r)
     {
         const std::string t = reasonText(static_cast<Reason>(r));
         INFO(r);
         REQUIRE_FALSE(t.empty());
         seen.insert(t);
     }
-    REQUIRE(seen.size() == 27);   // 27 distinct strings
+    REQUIRE(seen.size() == 28);   // 28 distinct strings
     REQUIRE(reasonText(Reason::None).empty());
     ViewInputs in = base();
     in.state = State::Failed; in.reason = Reason::NoReturn;
@@ -350,4 +351,17 @@ TEST_CASE("view_model_interface_text_is_the_device_reaper_reports")
     REQUIRE(interfaceText("", "MOTU 828") == "MOTU 828");
     REQUIRE(interfaceText("RME in", "RME out") == "RME in / RME out");
     REQUIRE(interfaceText("", "") == "no audio device");
+}
+
+TEST_CASE("view model: DriverUnsupported text and driver warnings", "[view_model]")
+{
+    REQUIRE(reasonText(Reason::DriverUnsupported) == "REAPER's audio driver is not supported. NovaInsert needs ASIO on Windows / ALSA on Linux");
+    auto has = [](const ViewModel& vm, const std::string& w) { return std::find(vm.warnings.begin(), vm.warnings.end(), w) != vm.warnings.end(); };
+    ViewInputs in;
+    in.state = State::Unavailable; in.reason = Reason::DriverUnsupported; in.driverMode = "WASAPI";
+    REQUIRE(has(ViewModel::from(in), "Audio driver: WASAPI"));
+    ViewInputs ov;
+    ov.driverOverride = true; ov.driverMode = "Dummy Audio";
+    REQUIRE(has(ViewModel::from(ov), "TEST DRIVER: Dummy Audio"));
+    REQUIRE_FALSE(has(ViewModel::from(ViewInputs {}), "TEST DRIVER: "));
 }

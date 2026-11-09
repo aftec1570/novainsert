@@ -1,4 +1,6 @@
 #include "host/reaper_api.hpp"
+#include "host/platform.hpp"
+#include <string_view>
 #include <cstdlib>
 #include <cstring>
 
@@ -90,11 +92,32 @@ DeviceKey readDeviceKey(const ReaperApi& api)
     k.sampleRate = std::atoi(read("SRATE").c_str());
     k.bufferSize = std::atoi(read("BSIZE").c_str());
 
-    // REAPER 7.83 reports the system default device as "CoreAudio Default" (IDENT_IN/IDENT_OUT); older observations
-    // (F0.1, attribute IDENT) saw an empty string. Both mean "not a stable identity".
-    const auto unidentified = [](const std::string& s) { return s.empty() || s == "<default>" || s == "CoreAudio Default"; };
-    k.isDefault = unidentified(k.identIn) || unidentified(k.identOut) || k.sampleRate <= 0 || k.bufferSize <= 0;
+    k.mode = read("MODE");
+    k.isDefault = isDefaultDeviceName(k.identIn) || isDefaultDeviceName(k.identOut) || k.sampleRate <= 0 || k.bufferSize <= 0;
     return k;
+}
+
+bool isDefaultDeviceName(const std::string& ident) noexcept
+{
+    // REAPER 7.83 reports the macOS system default as "CoreAudio Default"; F0.1 (attribute IDENT) saw an empty string;
+    // REAPER 7.85 Linux reports ALSA's "default" PCM as "ALSA default". None of them is a stable identity.
+    return ident.empty() || ident == "<default>" || ident == "CoreAudio Default" || ident == "ALSA default";
+}
+
+DriverVerdict driverVerdict(const std::string& mode) noexcept
+{
+    const auto b = mode.find_first_not_of(" \t");
+    if (b == std::string::npos) return DriverVerdict::Unknown;
+    const auto e = mode.find_first_of(" \t", b);
+    const std::string_view token(mode.data() + b, (e == std::string::npos ? mode.size() : e) - b);
+    const std::string_view want(platform::kSupportedDriver);
+    if (token.size() != want.size()) return DriverVerdict::Unsupported;
+    for (size_t i = 0; i < want.size(); ++i)
+    {
+        const auto lc = [](char c) { return c >= 'A' && c <= 'Z' ? static_cast<char>(c - 'A' + 'a') : c; };
+        if (lc(token[i]) != lc(want[i])) return DriverVerdict::Unsupported;
+    }
+    return DriverVerdict::Supported;
 }
 
 } // namespace ni::host

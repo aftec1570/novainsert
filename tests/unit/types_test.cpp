@@ -16,7 +16,7 @@ static CalibKey baseKey()
     return k;
 }
 
-TEST_CASE("constants match F1 §23")
+TEST_CASE("constants match F1 s23")
 {
     REQUIRE(kLMax == 65536);
     REQUIRE(kBMax == 2048);
@@ -47,4 +47,11 @@ TEST_CASE("State and Reason enumerators exist with the F1 names")
     REQUIRE(static_cast<int>(State::Idle) == 0);
     Reason r = Reason::PdcNotObserved; (void) r;
     CalibResult res{}; res.failReason = Reason::None; REQUIRE(res.reportedPdc == 0);
+}
+
+TEST_CASE("DriverUnsupported is appended after UserRequest and blocks measuring", "[types]")
+{
+    using ni::engine::Reason; using ni::engine::State;
+    REQUIRE(static_cast<int>(Reason::DriverUnsupported) == static_cast<int>(Reason::UserRequest) + 1);
+    REQUIRE_FALSE(ni::engine::measureRequestAllowed(State::Unavailable, Reason::DriverUnsupported));
 }

@@ -2,6 +2,9 @@
 #include <cstring>
 #include <string>
 #include <vector>
+#include <algorithm>
+#include <cctype>
+#include "host/platform.hpp"
 #include "host/reaper_api.hpp"
 
 using namespace ni::host;
@@ -17,7 +20,7 @@ void* fakeResolver(const char* name)
     return reinterpret_cast<void*>(&dummy);
 }
 // Fake GetAudioDeviceInfo for readDeviceKey tests.
-const char* g_identIn = "BlackHole 64ch"; const char* g_identOut = "BlackHole 64ch";
+const char* g_identIn = "BlackHole 64ch"; const char* g_identOut = "BlackHole 64ch"; const char* g_mode = "";
 bool fakeGetAudioDeviceInfo(const char* attr, char* buf, int bufSz)
 {
     const char* v = nullptr;
@@ -25,6 +28,7 @@ bool fakeGetAudioDeviceInfo(const char* attr, char* buf, int bufSz)
     else if (!std::strcmp(attr, "IDENT_OUT")) v = g_identOut;
     else if (!std::strcmp(attr, "SRATE")) v = "48000";
     else if (!std::strcmp(attr, "BSIZE")) v = "64";
+    else if (!std::strcmp(attr, "MODE")) v = g_mode;
     else return false;
     std::snprintf(buf, (size_t) bufSz, "%s", v); return true;
 }
@@ -139,4 +143,40 @@ TEST_CASE("track FX named-config API is resolved but optional (own slot name)")
     REQUIRE(loadReaperApi(&fakeResolver, b, m) == ApiStatus::Ok);
     REQUIRE(b.TrackFX_SetNamedConfigParm == nullptr);
     g_missing.clear();
+}
+
+TEST_CASE("driverVerdict: family prefix match", "[reaper_api]")          // Review Focus 1
+{
+    using V = ni::host::DriverVerdict;
+    const std::string ok = ni::host::platform::kSupportedDriver;
+    std::string lower = ok;
+    std::transform(lower.begin(), lower.end(), lower.begin(), [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+    REQUIRE(ni::host::driverVerdict(ok) == V::Supported);
+    REQUIRE(ni::host::driverVerdict(ok + " (RME Fireface USB)") == V::Supported);
+    REQUIRE(ni::host::driverVerdict(lower) == V::Supported);
+    REQUIRE(ni::host::driverVerdict(ok + "X") == V::Unsupported);   // a token, not a raw prefix
+    REQUIRE(ni::host::driverVerdict("Dummy Audio") == V::Unsupported);
+    REQUIRE(ni::host::driverVerdict("WASAPI") == V::Unsupported);
+    REQUIRE(ni::host::driverVerdict("JACK") == V::Unsupported);
+}
+
+TEST_CASE("driverVerdict: empty mode passes as Unknown", "[reaper_api]")  // Review Focus 2
+{
+    REQUIRE(ni::host::driverVerdict("") == ni::host::DriverVerdict::Unknown);
+    REQUIRE(ni::host::driverVerdict("   ") == ni::host::DriverVerdict::Unknown);
+}
+
+TEST_CASE("readDeviceKey fills mode and default flags per table", "[reaper_api]")
+{
+    ReaperApi a; a.GetAudioDeviceInfo = &fakeGetAudioDeviceInfo;
+    g_identIn = "BlackHole 64ch"; g_identOut = "BlackHole 64ch"; g_mode = "ASIO";
+    const DeviceKey key = readDeviceKey(a);
+    REQUIRE(key.mode == "ASIO");
+    g_mode = "";
+    REQUIRE(ni::host::isDefaultDeviceName(""));
+    REQUIRE(ni::host::isDefaultDeviceName("<default>"));
+    REQUIRE(ni::host::isDefaultDeviceName("CoreAudio Default"));
+    REQUIRE(ni::host::isDefaultDeviceName("ALSA default"));   // docs/port/driver-identity.md
+    REQUIRE_FALSE(ni::host::isDefaultDeviceName("ALSA 0,0"));
+    REQUIRE_FALSE(ni::host::isDefaultDeviceName("Babyface (23456789)"));
 }

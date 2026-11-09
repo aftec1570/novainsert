@@ -37,3 +37,12 @@ TEST_CASE("diagnostics: a text row reaches the CSV immediately, and is dropped w
     REQUIRE(csv.find(",STATE,3,state=5|reason=7\n") != std::string::npos);
     REQUIRE(csv.find("BEFORE") == std::string::npos);
 }
+
+TEST_CASE("settings: allowAnyDriver is read by probeSettings, default false", "[diagnostics]")
+{
+    const auto p = std::filesystem::temp_directory_path() / "novainsert-settings-anydriver.json";
+    { std::ofstream o(p); o << "{\"diagnostics\": false}"; }
+    REQUIRE_FALSE(DiagLog::probeSettings(p.string()).allowAnyDriver);
+    { std::ofstream o(p); o << "{\"allowAnyDriver\": true, \"diagnostics\": false}"; }
+    REQUIRE(DiagLog::probeSettings(p.string()).allowAnyDriver);
+}

@@ -53,6 +53,7 @@ inline std::string reasonText(engine::Reason r)
         case R::LagMismatch: return "Repeated probes disagreed";
         case R::ChannelAsymmetry: return "Left and right loops differ";
         case R::UserRequest: return "Re-calibration requested";
+        case R::DriverUnsupported: return "REAPER's audio driver is not supported. NovaInsert needs ASIO on Windows / ALSA on Linux";
     }
     return "Unknown reason";
 }
@@ -113,6 +114,8 @@ struct ViewInputs
     bool reverseWheel = false;                 // SETUP: trim knobs turn the other way on the mouse wheel (global, GitHub #1)
     std::string libraryWarning;                // first library load warning (missing/corrupt/read-only); empty = none
     std::string hostVersion;                   // GetAppVersion(), e.g. "7.83/macOS-arm64"; empty = unknown
+    std::string driverMode;                    // GetAudioDeviceInfo("MODE") (1.1.0 driver gate)
+    bool driverOverride = false;               // allowAnyDriver let an unsupported driver through (test setups only)
     // Level CAL / VU (VU GUI spec 2026-11-02)
     bool sendStereo = false, retStereo = false;        // effective widths (what the loop, meters and readouts run on)
     bool recSendStereo = false, recReturnStereo = false;   // record widths: a STEREO direction shows its STEREO | L | R selector
@@ -238,6 +241,8 @@ struct ViewModel
             std::strftime(b, sizeof b, "%Y-%m-%d %H:%M:%S", &tm);
             vm.timestampText = b;
         }
+        if (in.reason == engine::Reason::DriverUnsupported) vm.warnings.push_back("Audio driver: " + in.driverMode);
+        if (in.driverOverride) vm.warnings.push_back("TEST DRIVER: " + in.driverMode);
         for (const auto& t : in.anticipativeViolationTracks) vm.warnings.push_back("Anticipative FX re-enabled on " + t);
         if (!in.conflictWith.empty()) vm.warnings.push_back("Device in use by " + in.conflictWith);
         if (in.renderLeftAt >= 0) vm.warnings.push_back("Render speed left at " + std::to_string(in.renderLeftAt));

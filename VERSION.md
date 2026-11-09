@@ -1,7 +1,23 @@
 # NovaInsert — version history
 
-Latest version: **1.0.1** · [Download the latest signed and notarized DMG](https://github.com/aftec1570/novainsert/releases/latest) ·
+Latest version: **1.1.0** · [Download the latest release (macOS DMG, Linux tar.gz)](https://github.com/aftec1570/novainsert/releases/latest) ·
 [All releases](https://github.com/aftec1570/novainsert/releases) · [Bug and fix ledger](BUGS.md)
+
+## 1.1.0 — 2026-11-09
+
+Linux release. Projects, presets (`devices.json`) and settings from 1.0.x load unchanged on every platform.
+
+- **New: Linux x86_64 build** (`NovaInsert-1.1.0-Linux-x86_64.tar.gz`, glibc 2.35 or newer, ALSA). `install.sh` copies the
+  plug-in to `~/.vst3`. Validation: functionally validated in a virtual environment; hardware timing validation pending (beta).
+- **New: audio-driver check.** NovaInsert arms and measures only on REAPER's native driver: CoreAudio on macOS, ALSA on
+  Linux. On any other driver (JACK, PulseAudio, Dummy Audio, …) it stays unarmed and shows "REAPER's audio driver is not
+  supported. NovaInsert needs ASIO on Windows / ALSA on Linux".
+- macOS: unchanged features; validation tier unchanged (hardware-validated on a UA Apollo bench).
+- Windows x64 (ASIO) is not in this release; it follows in 1.1.1.
+
+SHA-256:
+- `NovaInsert-1.1.0-macOS-arm64.dmg`: `0b4b519215ffdca3ed31baef335e861e9b68ce846b454641d256113049b16185`
+- `NovaInsert-1.1.0-Linux-x86_64.tar.gz`: `528d34d012ef9766f0c9611d11cad81933acdfa3c3ba51b63d83771e7530098a`
 
 ## 1.0.1 — 2026-11-08
 

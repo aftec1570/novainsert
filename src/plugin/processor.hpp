@@ -15,7 +15,7 @@
 #include "plugin/instance.hpp"
 #include "plugin/measurer.hpp"
 #include "plugin/pdc_reporter.hpp"
-#include "plugin/render_window.hpp"
+#include "host/render_window.hpp"
 #include "host/render_arbiter.hpp"
 #include "plugin/correlator_worker.hpp"
 #include "engine/meters.hpp"
@@ -40,6 +40,7 @@ public:
 
     void prepareToPlay (double sampleRate, int samplesPerBlock) override;
     void releaseResources() override {}
+    using juce::AudioProcessor::processBlock;   // keep the double overload visible (gcc -Woverloaded-virtual)
     void processBlock (juce::AudioBuffer<float>&, juce::MidiBuffer&) override;
     bool isBusesLayoutSupported (const BusesLayout&) const override;
 
@@ -157,6 +158,9 @@ private:
     int lastBufferSize_ = 0;
     std::string lastIdent_;
     std::string identIn_, identOut_;   // current host device identity (CalibKey, Task 22/23)
+    // Driver gate (1.1.0 port): MODE as REAPER reports it, the allowAnyDriver override, and the once/on-change log state
+    std::string driverMode_, lastUnsupportedMode_;
+    bool driverOverride_ = false, driverUnknownLogged_ = false, driverOverrideLogged_ = false;
     std::vector<std::string> outNames_, inNames_;   // host channel names for the DEVICES page (pollLibrary)
     int libraryIndexOf (const std::string& id) const;   // 1-based library index, 0 = not in the library
     void realignClaim();                                // after a library reload/delete: the claimed index follows the running record's id

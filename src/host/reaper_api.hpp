@@ -81,8 +81,17 @@ struct DeviceKey
     int bufferSize = 0;
     bool open = false;
     bool isDefault = true;
+    std::string mode;   // GetAudioDeviceInfo("MODE"), e.g. "ASIO", "ALSA 0,0 16-bit"; empty on macOS (docs/port/driver-identity.md)
 };
 
 DeviceKey readDeviceKey(const ReaperApi& api);
+
+// Driver gate (spec 2026-11-09 §4): the first whitespace-delimited token of MODE against platform::kSupportedDriver,
+// case-insensitive. An empty MODE (macOS reports none) is Unknown and passes.
+enum class DriverVerdict { Supported, Unknown, Unsupported };
+DriverVerdict driverVerdict(const std::string& mode) noexcept;
+
+// IDENT_IN / IDENT_OUT values that name no concrete device (docs/port/driver-identity.md): such a key is never persisted.
+bool isDefaultDeviceName(const std::string& ident) noexcept;
 
 } // namespace ni::host

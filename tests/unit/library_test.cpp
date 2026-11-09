@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <cmath>
 #include <catch2/catch_test_macros.hpp>
 #include <filesystem>
@@ -131,13 +132,13 @@ TEST_CASE("library_readonly_file_warns_and_runs")
 {
     const auto d = tempDir("ro");
     writeFile(d / "devices.json", R"({"schema":1,"devices":[{"id":"a","name":"A","stereo":false,"out":[4],"in":[4]}]})");
-    ::chmod((d / "devices.json").c_str(), 0444);
+    fs::permissions(d / "devices.json", fs::perms::owner_write | fs::perms::group_write | fs::perms::others_write, fs::perm_options::remove);
     DeviceLibrary lib(d);
     REQUIRE(lib.load() == DeviceLibrary::LoadStatus::ReadOnly);
     REQUIRE_FALSE(lib.upsertDevice(rec("b", "B")));
     REQUIRE_FALSE(lib.warnings().empty());
     REQUIRE(lib.devices().size() == 1);
-    ::chmod((d / "devices.json").c_str(), 0644);
+    fs::permissions(d / "devices.json", fs::perms::owner_write, fs::perm_options::add);
 }
 
 TEST_CASE("library_concurrent_writers_keep_both_records")
@@ -413,7 +414,7 @@ TEST_CASE("library_offsets_out_of_range_are_clamped_on_load")
     REQUIRE(sanitizeOffsetDb(INFINITY) == 0.0f);
 }
 
-TEST_CASE("library: a legacy infraLatency property loads and is dropped on the next write (Effect PDC spec 2026-11-04 §3)")
+TEST_CASE("library: a legacy infraLatency property loads and is dropped on the next write (Effect PDC spec 2026-11-04 s3)")
 {
     const auto d = tempDir("legacy-infra");
     writeFile(d / "devices.json", R"({"schema":1,"devices":[
@@ -583,4 +584,38 @@ TEST_CASE("settings_reverse_wheel_defaults_off_persists_and_is_shared")
     REQUIRE(c.settings().skin == 1);
     writeFile(d / "settings.json", "{ broken");
     REQUIRE_FALSE(c.setReverseWheel(true));    // a corrupt file is never overwritten
+}
+
+TEST_CASE("settings_allow_any_driver_defaults_off_and_parses")
+{
+    const auto d = tempDir("settings_anydriver");
+    DeviceLibrary lib(d);
+    lib.load();
+    REQUIRE_FALSE(lib.settings().allowAnyDriver);
+    writeFile(d / "settings.json", R"({"allowAnyDriver":true})");
+    lib.load();
+    REQUIRE(lib.settings().allowAnyDriver);
+}
+
+TEST_CASE("library: a directory path in the platform's native form reads and writes devices.json")   // Review Focus 4
+{
+#ifdef _WIN32
+    const auto base = tempDir("native_sep");
+    std::string native = base.string();
+    std::replace(native.begin(), native.end(), '/', '\\');
+    const fs::path d = fs::path(native) / "sub dir";
+#else
+    const fs::path d = tempDir("native_sep") / "sub dir";
+#endif
+    fs::create_directories(d);
+    writeFile(d / "devices.json", R"({"schema":1,"devices":[{"id":"a","name":"Unit A","out":[0,1],"in":[0,1]}]})");
+    DeviceLibrary lib(d);
+    REQUIRE(lib.load() == DeviceLibrary::LoadStatus::Ok);
+    REQUIRE(lib.devices().size() == 1);
+    DeviceRecord r = lib.devices()[0];
+    r.name = "Unit A renamed";
+    REQUIRE(lib.upsertDevice(r));
+    DeviceLibrary back(d);
+    REQUIRE(back.load() == DeviceLibrary::LoadStatus::Ok);
+    REQUIRE(back.devices().at(0).name == "Unit A renamed");
 }

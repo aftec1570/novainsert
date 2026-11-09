@@ -240,10 +240,10 @@ TEST_CASE("instance_channel_beyond_device_is_ignored")
 {
     ni::host::HookDispatcher hooks { &testClock };
     const int B = 64;
-    const Pair far { { 40, 41 }, { 40, 41 }, true };
+    const Pair farPair { { 40, 41 }, { 40, 41 }, true };
     Instance inst(hooks);
-    REQUIRE(inst.configure(far, kStereoRouting, B));
-    Rig rig(inst, B, 2, far, 20000);
+    REQUIRE(inst.configure(farPair, kStereoRouting, B));
+    Rig rig(inst, B, 2, farPair, 20000);
     rig.run(100);
     REQUIRE(rig.foreignWrites == 0);
     int64_t nonZero = 0;

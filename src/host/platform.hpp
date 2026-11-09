@@ -2,6 +2,12 @@
 // the port's entry points (review 2026-11-04 portability) and are compiled on Windows only.
 #pragma once
 #ifdef _WIN32
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
 #include <windows.h>
 #else
 #include <fcntl.h>
@@ -19,6 +25,24 @@
 
 namespace ni::host
 {
+namespace platform
+{
+// The one audio driver family each build supports (spec 2026-11-09 §4): REAPER's GetAudioDeviceInfo("MODE") starts with it.
+#if defined(__APPLE__)
+inline constexpr const char* kSupportedDriver = "CoreAudio";
+#elif defined(_WIN32)
+inline constexpr const char* kSupportedDriver = "ASIO";
+#else
+inline constexpr const char* kSupportedDriver = "ALSA";
+#endif
+
+// Names the calling thread (truncated where the OS limits it: 15 bytes on Linux) and lowers its priority so it never
+// competes with audio or UI: QoS utility (macOS), THREAD_PRIORITY_BELOW_NORMAL (Windows), nice +10 (Linux, per thread).
+void setLowPriorityWorker(const char* name) noexcept;
+// The calling thread's name as the OS reports it; "" where it cannot be read.
+std::string currentThreadName();
+} // namespace platform
+
 // Exclusive advisory lock on one file for the scope (shared by every process using a library directory): flock on POSIX,
 // LockFileEx on Windows. Best effort — a lock that cannot be taken does not stop the caller (same as the flock original).
 class FileLock

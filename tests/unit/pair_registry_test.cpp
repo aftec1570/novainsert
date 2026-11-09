@@ -102,7 +102,7 @@ TEST_CASE("pair registry: ownerTrackOf excludes self")
     REQUIRE_FALSE(r.ownerTrackOf(monoPair(6, 6), 2).has_value());
 }
 
-TEST_CASE("pair registry: per-direction widths — a mono-send/stereo-return pair owns one output and two inputs")
+TEST_CASE("pair registry: per-direction widths - a mono-send/stereo-return pair owns one output and two inputs")
 {
     PairRegistry r;
     const Pair mixed { { 0, 1 }, { 0, 1 }, false, true };   // out 1 only (out[1] ignored), in 1/2

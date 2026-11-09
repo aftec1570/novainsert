@@ -1,10 +1,6 @@
 // CorrelatorWorker (plan Task 16): see correlator_worker.hpp.
 #include "plugin/correlator_worker.hpp"
-
-#if defined(__APPLE__)
-#include <pthread.h>
-#include <pthread/qos.h>
-#endif
+#include "host/platform.hpp"
 
 namespace ni::plugin
 {
@@ -37,10 +33,7 @@ size_t CorrelatorWorker::pendingJobs() const
 
 void CorrelatorWorker::run()
 {
-#if defined(__APPLE__)
-    pthread_setname_np("NovaInsert correlator");
-    pthread_set_qos_class_self_np(QOS_CLASS_UTILITY, 0);   // low priority: never competes with audio or UI
-#endif
+    ni::host::platform::setLowPriorityWorker("NovaInsert corr");   // low priority: never competes with audio or UI
     for (;;)
     {
         Item it;

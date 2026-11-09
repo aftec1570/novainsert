@@ -13,7 +13,7 @@ struct FakeTrack { int perf; FakeTrack* parent; GUID guid; const char* name; };
 FakeTrack g_t[4];
 void resetTracks()
 {
-    for (int i = 0; i < 4; ++i) { g_t[i] = FakeTrack { 0, nullptr, GUID {}, "" }; g_t[i].guid.Data1 = static_cast<unsigned long>(100 + i); }
+    for (int i = 0; i < 4; ++i) { g_t[i] = FakeTrack { 0, nullptr, GUID {}, "" }; g_t[i].guid.Data1 = static_cast<decltype(GUID {}.Data1)>(100 + i); }
     g_t[0].name = "Folder A"; g_t[1].name = "Folder B"; g_t[2].name = "Own"; g_t[3].name = "Other";
     g_t[1].parent = &g_t[0]; g_t[2].parent = &g_t[1];
 }

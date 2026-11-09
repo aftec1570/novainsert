@@ -26,7 +26,9 @@ enum class Reason : uint8_t { None = 0,
     NoReturn, Clipped, AmbiguousPeak, LowSnr, OutOfRange, Timeout, PdcNotObserved, AnticipativeOn, SampleRate,
     DefaultDevice, PairConflict, Recording, Crosstalk, LagMismatch, ChannelAsymmetry,
     // the user's RE-CALIBRATION (user 2026-11-06); appended so the stored failReason values keep their numbers
-    UserRequest };
+    UserRequest,
+    // REAPER runs on a driver family this build does not support (1.1.0 port: CoreAudio / ASIO / ALSA); appended likewise
+    DriverUnsupported };
 
 // Side of a STEREO direction (mono/stereo routing design 2026-11-05): the whole pair, or one side of a stereo unit used as a
 // mono loop. A MONO direction ignores its selector.

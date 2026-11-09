@@ -1,5 +1,6 @@
 // SlotLoopEngine (F1 §3 slot-locked loop, §8 mute, §14 RT, §20 routing) through the simulated host of host_sim.hpp.
 #include <catch2/catch_test_macros.hpp>
+#include <numbers>
 #include <catch2/generators/catch_generators.hpp>
 #include <cmath>
 #include <vector>
@@ -648,7 +649,7 @@ TEST_CASE("slot_loop_looping_trimmed_probe")
     Routing rt = kStereo; rt.sendTrimDb = -6.0f; rt.sendOffsetDb[1] = -6.0f;
     SlotLoopEngine e; e.prepare(B); e.setRouting(rt); REQUIRE(e.setLatency(2 * B, 4 * B));
     std::vector<float> tone(4800);
-    for (size_t i = 0; i < tone.size(); ++i) tone[i] = 0.5f * std::sin(2.0f * float(M_PI) * float(i % 48) / 48.0f);
+    for (size_t i = 0; i < tone.size(); ++i) tone[i] = 0.5f * std::sin(2.0f * std::numbers::pi_v<float> * float(i % 48) / 48.0f);
     e.setProbe(tone.data(), 4800, true, true);
     std::vector<float> l(B), r(B), il(B, 0.0f), ir(B, 0.0f);
     float* out[2] { l.data(), r.data() };

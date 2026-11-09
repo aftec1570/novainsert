@@ -16,7 +16,7 @@ class PluginIdentity(unittest.TestCase):
     def test_bundle_identifier(self):
         with open(BUNDLE / "Contents/Info.plist", "rb") as f: self.assertEqual(plistlib.load(f)["CFBundleIdentifier"], BUNDLE_ID)
     def test_bundle_version_is_the_release_version(self):
-        self.assertEqual(VERSION, "1.0.1")
+        self.assertEqual(VERSION, "1.1.0")
         with open(BUNDLE / "Contents/Info.plist", "rb") as f: info = plistlib.load(f)
         self.assertEqual((info["CFBundleShortVersionString"], info["CFBundleVersion"]), (VERSION, VERSION))
     def test_class_ids_unchanged_so_saved_projects_load(self):

@@ -1,9 +1,10 @@
 # NovaInsert
 
-**A REAPER-only VST3 hardware insert for macOS (Apple silicon) that measures its own latency.**
-Version 1.0.1 · by [Hillside Studios](https://hillsidestudio.io) · free to use, provided as is without any warranty (see [License](#license)).
+**A REAPER-only VST3 hardware insert for macOS (Apple silicon) and Linux (x86_64) that measures its own latency.**
+Version 1.1.0 · by [Hillside Studios](https://hillsidestudio.io) · free to use, provided as is without any warranty (see [License](#license)).
 
-**[Download NovaInsert 1.0.1 (signed and notarized DMG)](https://github.com/aftec1570/novainsert/releases/latest)** ·
+**[Download NovaInsert 1.1.0](https://github.com/aftec1570/novainsert/releases/latest)**: macOS (signed and notarized DMG) ·
+Linux x86_64 (tar.gz, beta) · Windows x64 follows in 1.1.1 ·
 [User manual](docs/manual/NovaInsert-User-Manual.md) ([PDF](docs/manual/NovaInsert-User-Manual.pdf))
 
 ![NovaInsert in REAPER](docs/manual/img/reaper_window.png)
@@ -13,7 +14,8 @@ output of your audio interface, takes the return from a physical input, measures
 converters, cables and the device itself, and tells REAPER that delay so the return lines up to the sample. It also keeps
 the analog levels where the outboard expects them, with VU meters, level bars, trims and a one-press level calibration.
 
-The full user manual ships in the DMG as a PDF. This page is the short version.
+The full user manual ships in the DMG as a PDF (Linux: [docs/manual](docs/manual/NovaInsert-User-Manual.pdf) in this
+repository). This page is the short version.
 
 ## What it does
 
@@ -52,20 +54,39 @@ You are responsible for the routing, the monitoring level and the hardware. See 
 
 | Requirement | Value |
 |---|---|
-| Host | REAPER 7.83 or newer (validated on 7.83 and 7.85), macOS, Apple silicon (arm64) |
+| Host | REAPER 7.83 or newer (validated on 7.83 and 7.85) |
+| Platform | macOS on Apple silicon (arm64); Linux x86_64 with glibc 2.35 or newer (Ubuntu 22.04 or newer), beta |
 | Plug-in format | VST3 only |
 | Sample rate | 48 kHz |
-| Audio device | one specific CoreAudio device selected in REAPER, not the system default |
+| Audio device | macOS: one specific CoreAudio device selected in REAPER, not the system default; Linux: one specific ALSA device (`hw:` or `plughw:`), not `default` |
 | Instances | up to 20 active instances validated |
 | Loop length | up to 65 536 samples |
 
+**Audio driver.** NovaInsert works only on REAPER's native driver for the platform: CoreAudio on macOS, ALSA on Linux
+(ASIO on Windows from 1.1.1). On any other driver (JACK, PulseAudio, Dummy Audio, …) it does not arm or measure and shows
+"REAPER's audio driver is not supported. NovaInsert needs ASIO on Windows / ALSA on Linux". Switch REAPER to the native
+driver in Options → Preferences → Audio → Device.
+
+**Validation.** macOS is validated on real hardware (a UA Apollo with analog outboard loops). Linux is functionally
+validated in a virtual environment; hardware timing validation pending (beta). Reports from real ALSA interfaces are welcome.
+
 ## Install
 
-1. Download `NovaInsert-1.0.1.dmg` from the [release page](https://github.com/aftec1570/novainsert/releases/latest).
-2. Open the DMG and double-click "Install NovaInsert 1.0.1.pkg".
+### macOS
+
+1. Download `NovaInsert-1.1.0-macOS-arm64.dmg` from the [release page](https://github.com/aftec1570/novainsert/releases/latest).
+2. Open the DMG and double-click "Install NovaInsert 1.1.0.pkg".
 3. Read and accept the license agreement; the installer copies the plug-in to `/Library/Audio/Plug-Ins/VST3`.
    The package is signed with an Apple Developer ID and notarized by Apple, so macOS opens it without a security prompt.
 4. In REAPER: Options → Preferences → Plug-ins → VST → "Re-scan". Add "VST3: NovaInsert (Hillside Studios)" to a track.
+
+### Linux (beta)
+
+1. Download `NovaInsert-1.1.0-Linux-x86_64.tar.gz` and its `.sha256` from the
+   [release page](https://github.com/aftec1570/novainsert/releases/latest); check it with `sha256sum -c *.sha256`.
+2. `tar xzf NovaInsert-1.1.0-Linux-x86_64.tar.gz && ./install.sh` copies the plug-in to `~/.vst3` (no sudo). For all
+   users, copy `NovaInsert.vst3` to `/usr/lib/vst3/` instead.
+3. In REAPER: select the ALSA driver and a specific device, then Options → Preferences → Plug-ins → VST → "Re-scan".
 
 ## First use: define your devices
 
@@ -255,9 +276,11 @@ pass have no hardware return yet. NovaInsert reports the gap instead of hiding i
 | Re-apply anticipative FX fix | trigger | the same as the button |
 | State, Physical loop, Reported PDC, Inherent gap, CAL action, CAL status | read only | for scripts and controllers |
 
-## Limitations of version 1.0.1
+## Limitations of version 1.1.0
 
-- 48 kHz, REAPER 7.83 or newer (validated on 7.83 and 7.85), macOS Apple silicon, VST3 only.
+- 48 kHz, REAPER 7.83 or newer (validated on 7.83 and 7.85), VST3 only.
+- macOS Apple silicon and Linux x86_64 only; Windows x64 follows in 1.1.1. CoreAudio (macOS) and ALSA (Linux) only.
+- Linux is functionally validated in a virtual environment; hardware timing validation pending (beta).
 - Presets are stored by position: deleting one shifts the later ones in projects not reopened since.
 - The first "loop length" samples of each play or render pass have no hardware return.
 - Effect mode alignment is driver-reported, not sample-measured.
@@ -267,25 +290,28 @@ pass have no hardware return yet. NovaInsert reports the gap instead of hiding i
 
 ## Build from source
 
-Requirements: macOS on Apple silicon, Xcode command line tools, CMake 3.25 or newer. JUCE 8 (which carries the VST3 SDK),
-the REAPER SDK and Catch2 are git submodules.
+Requirements: CMake 3.25 or newer and a C++20 compiler; macOS on Apple silicon (Xcode command line tools) or Linux x86_64
+(GCC 11 or newer). JUCE 8 (which carries the VST3 SDK), the REAPER SDK and Catch2 are git submodules. Linux build
+dependencies (Ubuntu 22.04 package names): `build-essential cmake ninja-build libasound2-dev libx11-dev libxrandr-dev
+libxinerama-dev libxcursor-dev libxext-dev libfreetype6-dev libfontconfig1-dev libgl1-mesa-dev`.
 
 ```bash
 git clone --recursive https://github.com/aftec1570/novainsert.git
 cd novainsert
-cmake -B build-release -DCMAKE_BUILD_TYPE=Release
+cmake -B build-release -DCMAKE_BUILD_TYPE=Release          # Linux: add -G Ninja
 cmake --build build-release --target NovaInsert_VST3
 # the plug-in: build-release/src/NovaInsert_artefacts/Release/VST3/NovaInsert.vst3
 cmake --build build-release            # also builds the unit tests and the manual screenshot tool
 build-release/tests/novainsert_unit_tests
 ```
 
-The unit tests (`tests/unit`, Catch2) and the manual screenshot tool are part of the build. The hardware bench harness that
+The unit tests (`tests/unit`, Catch2) and the manual screenshot tool are part of the build. `tools/package_archive.sh
+build-release dist` packs a Linux build into the release tar.gz (`install.sh`, read-me, license, sha256). The hardware bench harness that
 validated the plug-in on a real audio interface (REAPER scripts and captures) is not part of this repository.
 
 ### Installer and release
 
-`tools/make_installer.sh` builds `dist/NovaInsert-<version>.dmg` from the Release VST3: a standard macOS installer
+`tools/make_installer.sh` builds `dist/NovaInsert-<version>-macOS-arm64.dmg` from the Release VST3: a standard macOS installer
 (welcome → license agreement that must be accepted → install to `/Library/Audio/Plug-Ins/VST3`) plus `LICENSE.md`, the
 manual PDF and a read-me. Without the identities below the build is unsigned (macOS then needs System Settings → Privacy & Security → "Open
 Anyway"). Signed, notarized release build (the published DMG is built this way):

@@ -87,7 +87,7 @@ TEST_CASE("arbiter_ignores_instance_idle_for_401ms")
 {
     Rig r;
     r.add(State::Locked, "Bass");
-    r.add(State::Measuring, "Old", Mode::Insert, false, 401);
+    r.add(State::Measuring, "Old", Mode::Insert, 401);
     r.add(State::Failed, "Bypassed", Mode::Insert, 10, true);
     REQUIRE_FALSE(r.arb.onCommandPre(41824, kProj));
     REQUIRE(r.arb.last() == Decision::Armed);
@@ -96,7 +96,7 @@ TEST_CASE("arbiter_ignores_instance_idle_for_401ms")
 TEST_CASE("arbiter_no_involved_instance_observes_only")
 {
     Rig r;
-    r.add(State::Measuring, "Old", Mode::Insert, false, 500);
+    r.add(State::Measuring, "Old", Mode::Insert, 500);
     g_var = 1;
     REQUIRE_FALSE(r.arb.onCommandPre(41824, kProj));
     REQUIRE(r.arb.last() == Decision::NoActiveInstance);

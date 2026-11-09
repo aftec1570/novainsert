@@ -1,0 +1,92 @@
+# Build, unit tests and pluginval (strictness 10) for Windows x64 (MSVC) and Linux x86_64 on every branch push.
+# macOS is not built here: it is built, signed and notarized on the Mac (no Apple credentials leave it).
+# release.yml calls this workflow with package: true to produce the release archives.
+name: ci
+on:
+  push:
+    branches: ['**']
+  workflow_dispatch:
+  workflow_call:
+    inputs:
+      package:
+        type: boolean
+        default: false
+
+env:
+  PLUGINVAL_VERSION: v1.0.4
+
+jobs:
+  build:
+    if: github.repository == 'aftec1570/novainsert-ci'   # the public source view (tools/github_mirror.sh) never builds
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            tag: Windows-x64
+            configure: -A x64   # default generator = the runner's current Visual Studio
+            pluginval: pluginval_Windows.zip
+          - os: ubuntu-22.04
+            tag: Linux-x86_64
+            configure: -G Ninja -DCMAKE_BUILD_TYPE=Release
+            pluginval: pluginval_Linux.zip
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Linux build dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends ninja-build xvfb \
+            libasound2-dev libx11-dev libxrandr-dev libxinerama-dev libxcursor-dev libxext-dev \
+            libfreetype6-dev libfontconfig1-dev libgl1-mesa-dev
+
+      - name: JUCE revision
+        id: juce
+        run: echo "sha=$(git -C external/JUCE rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/cache@v4
+        with:
+          path: build-ci
+          key: build-${{ matrix.tag }}-${{ steps.juce.outputs.sha }}-${{ hashFiles('CMakeLists.txt', 'src/CMakeLists.txt', 'tests/CMakeLists.txt') }}
+
+      - name: Configure
+        run: cmake -S . -B build-ci ${{ matrix.configure }}
+
+      - name: Build
+        run: cmake --build build-ci --config Release --parallel --target novainsert_unit_tests NovaInsert_VST3
+
+      - name: Unit tests
+        run: ctest --test-dir build-ci -C Release --output-on-failure
+
+      - name: pluginval
+        run: |
+          curl -fsSL -o pv.zip "https://github.com/Tracktion/pluginval/releases/download/${PLUGINVAL_VERSION}/${{ matrix.pluginval }}"
+          unzip -q -o pv.zip -d pluginval
+          VST3=build-ci/src/NovaInsert_artefacts/Release/VST3/NovaInsert.vst3
+          if [ "$RUNNER_OS" = Linux ]; then
+            chmod +x pluginval/pluginval
+            xvfb-run -a pluginval/pluginval --strictness-level 10 --validate-in-process --timeout-ms 600000 "$VST3"
+          else
+            pluginval/pluginval.exe --strictness-level 10 --validate-in-process --timeout-ms 600000 "$VST3"
+          fi
+
+      - name: Package
+        if: inputs.package
+        run: tools/package_archive.sh build-ci dist
+
+      - uses: actions/upload-artifact@v4
+        if: inputs.package
+        with:
+          name: NovaInsert-${{ matrix.tag }}
+          path: |
+            dist/*.zip
+            dist/*.tar.gz
+            dist/*.sha256
+          if-no-files-found: error

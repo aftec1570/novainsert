@@ -4,6 +4,14 @@ list(APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/external/Catch2/extras)
 include(Catch)
 
 file(GLOB NOVAINSERT_UNIT_SOURCES CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/unit/*.cpp)
+# Test names must be ASCII: catch_discover_tests passes each name to the test binary as a filter, and the Windows console
+# code page mangles UTF-8 there ("No test cases matched").
+foreach(src ${NOVAINSERT_UNIT_SOURCES})
+  file(STRINGS ${src} bad ENCODING UTF-8 REGEX "TEST_CASE\\(\"[^\"]*[^\t -~][^\"]*\"")
+  if(bad)
+    message(FATAL_ERROR "Non-ASCII test name in ${src}: ${bad}")
+  endif()
+endforeach()
 add_executable(novainsert_unit_tests ${NOVAINSERT_UNIT_SOURCES} rt/alloc_guard.cpp)
 target_include_directories(novainsert_unit_tests PRIVATE ${CMAKE_SOURCE_DIR}/src ${CMAKE_CURRENT_SOURCE_DIR})
 target_compile_options(novainsert_unit_tests PRIVATE ${NI_WARNINGS})

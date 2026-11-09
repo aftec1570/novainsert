@@ -15,11 +15,19 @@ typedef struct audio_hook_register_t
     ReaSample* (*GetBuffer)(bool isOutput, int idx);
 } audio_hook_register_t;
 
-#ifndef _WIN32
+#ifdef _WIN32
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#include <windows.h>   // HWND, GUID
+#else
 typedef void* HWND;
-typedef struct
+typedef struct   // swell-types.h layout: 16 bytes (Data1 is 32-bit; `unsigned long` would be 8 bytes on LP64)
 {
-    unsigned long Data1;
+    unsigned int Data1;
     unsigned short Data2;
     unsigned short Data3;
     unsigned char Data4[8];

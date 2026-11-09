@@ -209,9 +209,9 @@ void NovaInsertProcessor::setIHostApplication (Steinberg::FUnknown* host)
     coord_->setRenderView (instNo_, [this] { return renderView(); });   // render preflight (F1 §10, Task 21)
     if (! coord_->render().renderWindowOpen)
     {
-        coord_->render().renderWindowOpen = &ni::plugin::renderWindowOpen;
-        coord_->render().dialogOpening = &ni::plugin::renderWindowBeforeDialog;
-        coord_->render().dialogOpened = &ni::plugin::renderWindowAfterDialog;
+        coord_->render().renderWindowOpen = &ni::host::platform::renderWindowOpen;
+        coord_->render().dialogOpening = &ni::host::platform::renderWindowBeforeDialog;
+        coord_->render().dialogOpened = &ni::host::platform::renderWindowAfterDialog;
     }
     library_ = std::make_unique<ni::plugin::DeviceLibrary> (std::filesystem::path (base));
     const auto ls = library_->load();
@@ -429,6 +429,30 @@ void NovaInsertProcessor::evaluateHostState (Reason trigger)
     everOpen_ = true; lastBufferSize_ = key.bufferSize; lastIdent_ = key.identIn + "|" + key.identOut;
     identIn_ = key.identIn; identOut_ = key.identOut;
     if (key.isDefault) { setState (State::Unavailable, Reason::DefaultDevice); return; }
+    driverMode_ = key.mode;
+    driverOverride_ = false;
+    switch (ni::host::driverVerdict (key.mode))
+    {
+        case ni::host::DriverVerdict::Supported: lastUnsupportedMode_.clear(); break;
+        case ni::host::DriverVerdict::Unknown:
+            lastUnsupportedMode_.clear();
+            if (! driverUnknownLogged_) { driverUnknownLogged_ = true; ni::host::DiagLog::get().text ("DRIVER_UNKNOWN", instNo_, "mode="); }
+            break;
+        case ni::host::DriverVerdict::Unsupported:
+            if (library_ && library_->settings().allowAnyDriver)
+            {
+                driverOverride_ = true;
+                if (! driverOverrideLogged_) { driverOverrideLogged_ = true; ni::host::DiagLog::get().text ("DRIVER_OVERRIDE", instNo_, "%s", key.mode.c_str()); }
+                break;
+            }
+            if (lastUnsupportedMode_ != key.mode)
+            {
+                lastUnsupportedMode_ = key.mode;
+                ni::host::DiagLog::get().text ("DRIVER_UNSUPPORTED", instNo_, "%s", key.mode.c_str());
+            }
+            setState (State::Unavailable, Reason::DriverUnsupported);
+            return;
+    }
     const double prepared = preparedSampleRate_.load (std::memory_order_acquire);
     const int sr = key.sampleRate > 0 ? key.sampleRate : static_cast<int> (prepared);
     if (sr != ni::engine::kSampleRate || (prepared > 0.0 && static_cast<int> (prepared) != ni::engine::kSampleRate))
@@ -907,6 +931,8 @@ ni::gui::ViewInputs NovaInsertProcessor::viewInputs() const
     if (apiOk_ && coord_ && coord_->api().GetAppVersion) in.hostVersion = coord_->api().GetAppVersion();   // F1 §15 label
     in.state = state();
     in.reason = lastReason_;
+    in.driverMode = driverMode_;
+    in.driverOverride = driverOverride_;
     const bool active = inst_ && inst_->active();
     in.physLoop = active ? inst_->physLoop() : -1;
     in.reportedPdc = active ? getLatencySamples() : -1;

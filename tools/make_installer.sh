@@ -70,7 +70,7 @@ levels; never calibrate into a monitoring path.
 
 $GATE
 TXT
-DMG="$OUT/NovaInsert-$VERSION.dmg"; rm -f "$DMG"
+DMG="$OUT/NovaInsert-$VERSION-macOS-arm64.dmg"; rm -f "$DMG"
 hdiutil create -quiet -volname "NovaInsert $VERSION" -srcfolder "$WORK/dmg" -ov -format UDZO "$DMG"
 if [ -n "${NI_SIGN_IDENTITY:-}" ] && [ "$NI_SIGN_IDENTITY" != "-" ]; then   # the container too (Apple: sign, then notarise the DMG)
     codesign --timestamp --sign "$NI_SIGN_IDENTITY" "$DMG"

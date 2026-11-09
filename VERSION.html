@@ -10,7 +10,20 @@ h1{font-size:28px;letter-spacing:.02em;margin:0 0 12px} h2{font-size:19px;margin
 a{color:var(--accent)} code{font:14px ui-monospace,Menlo,monospace} li{margin:6px 0} p:first-of-type{color:var(--dim)}
 </style></head><body><main>
 <h1>NovaInsert — version history</h1>
-<p>Latest version: <strong>1.0.1</strong> · <a href="https://github.com/aftec1570/novainsert/releases/latest">Download the latest signed and notarized DMG</a> · <a href="https://github.com/aftec1570/novainsert/releases">All releases</a> · <a href="https://github.com/aftec1570/novainsert/blob/main/BUGS.md">Bug and fix ledger</a></p>
+<p>Latest version: <strong>1.1.0</strong> · <a href="https://github.com/aftec1570/novainsert/releases/latest">Download the latest release (macOS DMG, Linux tar.gz)</a> · <a href="https://github.com/aftec1570/novainsert/releases">All releases</a> · <a href="https://github.com/aftec1570/novainsert/blob/main/BUGS.md">Bug and fix ledger</a></p>
+<h2>1.1.0 — 2026-11-09</h2>
+<p>Linux release. Projects, presets (<code>devices.json</code>) and settings from 1.0.x load unchanged on every platform.</p>
+<ul>
+<li><strong>New: Linux x86_64 build</strong> (<code>NovaInsert-1.1.0-Linux-x86_64.tar.gz</code>, glibc 2.35 or newer, ALSA). <code>install.sh</code> copies the plug-in to <code>~/.vst3</code>. Validation: functionally validated in a virtual environment; hardware timing validation pending (beta).</li>
+<li><strong>New: audio-driver check.</strong> NovaInsert arms and measures only on REAPER's native driver: CoreAudio on macOS, ALSA on Linux. On any other driver (JACK, PulseAudio, Dummy Audio, …) it stays unarmed and shows "REAPER's audio driver is not supported. NovaInsert needs ASIO on Windows / ALSA on Linux".</li>
+<li>macOS: unchanged features; validation tier unchanged (hardware-validated on a UA Apollo bench).</li>
+<li>Windows x64 (ASIO) is not in this release; it follows in 1.1.1.</li>
+</ul>
+<p>SHA-256:</p>
+<ul>
+<li><code>NovaInsert-1.1.0-macOS-arm64.dmg</code>: <code>0b4b519215ffdca3ed31baef335e861e9b68ce846b454641d256113049b16185</code></li>
+<li><code>NovaInsert-1.1.0-Linux-x86_64.tar.gz</code>: <code>528d34d012ef9766f0c9611d11cad81933acdfa3c3ba51b63d83771e7530098a</code></li>
+</ul>
 <h2>1.0.1 — 2026-11-08</h2>
 <p>Bug-fix release. Projects, presets (<code>devices.json</code>) and settings from 1.0.0 load unchanged.</p>
 <ul>

@@ -76,6 +76,7 @@ DiagLog::Settings DiagLog::probeSettings(const std::string& settingsPath)
         return j.substr(p, e == std::string::npos ? std::string::npos : e - p);
     };
     s.diagnostics = valueAfter("diagnostics") == "true";
+    s.allowAnyDriver = valueAfter("allowAnyDriver") == "true";
     s.dir = valueAfter("diagnosticsDir");
     const std::string mc = valueAfter("maxConcurrentProbes");
     if (!mc.empty()) s.maxConcurrentProbes = std::max(0, std::atoi(mc.c_str()));

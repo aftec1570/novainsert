@@ -9,7 +9,7 @@ constexpr int kRef20 = 1, kRef18 = 2, kRefCustom = 3;
 constexpr int kPad = 22, kListW = 214, kFormX = 258, kLabelW = 104, kCtlX = kFormX + kLabelW, kRow = 28, kTop = 42, kHalf = 164;
 constexpr int kModeW = 118, kChanX = kCtlX + kModeW + 10, kChanW = 100;   // Send / Return rows: [MONO|STEREO] + one or two channel pickers
 constexpr int kCapS = 38, kCapR = 46;   // dBu row: caption widths ("send" / "return") left of the two fields
-bool near (double a, double b) { return std::fabs (a - b) < 0.05; }
+bool nearlyEqual (double a, double b) { return std::fabs (a - b) < 0.05; }
 } // namespace
 
 void DevicesPanel::applySkin()
@@ -159,7 +159,7 @@ void DevicesPanel::loadForm (const plugin::DeviceRecord& r)
     inR_.setTextWhenNothingSelected (juce::String::fromUTF8 ("input R\xe2\x80\xa6"));
     sendDbu_.setValue (r.sendDbuAt0dBFS, juce::dontSendNotification);
     returnDbu_.setValue (r.returnDbuAt0dBFS, juce::dontSendNotification);
-    const int refId = near (r.vuRefDbfs, -20.0) ? kRef20 : near (r.vuRefDbfs, -18.0) ? kRef18 : kRefCustom;
+    const int refId = nearlyEqual (r.vuRefDbfs, -20.0) ? kRef20 : nearlyEqual (r.vuRefDbfs, -18.0) ? kRef18 : kRefCustom;
     ref_.setSelectedId (refId, juce::dontSendNotification);
     refCustom_.setValue (r.vuRefDbfs, juce::dontSendNotification);
     refCustom_.setEnabled (refId == kRefCustom);

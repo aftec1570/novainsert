@@ -1,14 +1,22 @@
-#include "plugin/render_window.hpp"
+#include "host/render_window.hpp"
+#include "host/render_window_title.hpp"
 #import <AppKit/AppKit.h>
 #include <algorithm>
 #include <vector>
 
-namespace ni::plugin
+namespace ni::host::platform
 {
 namespace
 {
 std::vector<NSInteger> g_before;   // window numbers before 40015
+std::string g_title;               // LangPack title, "" = English only
 NSInteger g_dialog = 0;            // the adopted render dialog's window number, 0 = none
+
+std::string titleOf (NSWindow* w)  // UTF-8, "" when the window has no title
+{
+    const char* c = [[w title] UTF8String];
+    return c != nullptr ? std::string (c) : std::string();
+}
 
 bool present (NSWindow* w)         // open for the user: shown, minimised, or the whole application hidden (Cmd-H)
 {
@@ -49,10 +57,11 @@ bool renderWindowOpen()
         {
             const bool mine = g_dialog != 0 && [w windowNumber] == g_dialog;
             if (mine) tracked = present (w);
-            if ((mine || [[w title] hasPrefix:@"Render to File"]) && present (w)) return true;
+            if ((mine || renderTitleMatches (titleOf (w), g_title)) && present (w)) return true;
         }
         if (! tracked) g_dialog = 0;   // closed (or reused later for another window): forget it
     }
     return false;
 }
-} // namespace ni::plugin
+void renderWindowSetTitle (std::string langpackTitle) { g_title = std::move (langpackTitle); }
+} // namespace ni::host::platform

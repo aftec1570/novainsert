@@ -1,6 +1,7 @@
 // VU needle ballistics (VU GUI plan Task 2, spec §5, IEC 60268-17): ζ 0.81, ωn 13.4 rad/s → 99 % in 300 ms ±10 %, overshoot
 // 1–1.5 %; fixed 1 kHz integration independent of the frame rate; elastic bounce (0.25) at the stop pins.
 #include <catch2/catch_test_macros.hpp>
+#include <numbers>
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
 #include <cmath>
 #include "gui/vu_needle.hpp"
@@ -58,7 +59,7 @@ TEST_CASE("vu_needle_pin_bounce")
 TEST_CASE("vu_needle_drive_of_reference_sine")
 {
     const float amp = std::pow(10.0f, -20.0f / 20.0f);   // AES17: the −20 dBFS reference sine peaks at −20 dBFS
-    const float rect = 2.0f * amp / static_cast<float>(M_PI);
+    const float rect = 2.0f * amp / std::numbers::pi_v<float>;
     CHECK_THAT(needleDrive(rect, -20.0f), WithinAbs(1.0, 0.01));
     CHECK_THAT(positionToVu(vuToPosition(-7.0f)), WithinAbs(-7.0, 1e-4));
     CHECK_THAT(vuToPosition(3.0f), WithinAbs(1.0, 1e-6));

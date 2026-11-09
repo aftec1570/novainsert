@@ -7,7 +7,7 @@ namespace ni::gui
 namespace
 {
 constexpr int kRef20 = 1, kRef18 = 2, kRefCustom = 3;
-bool near (double a, double b) { return std::fabs (a - b) < 0.05; }
+bool nearlyEqual (double a, double b) { return std::fabs (a - b) < 0.05; }
 
 void setIfIdle (juce::Slider& s, double v)
 {
@@ -93,7 +93,7 @@ void SetupPanel::setValues (const ViewInputs& in, int sizePercent)
     setIfIdle (sendDbu_, in.sendDbuAt0dBFS);
     setIfIdle (returnDbu_, in.returnDbuAt0dBFS);
     if (const juce::String i (interfaceText (in.interfaceName, in.interfaceOutName)); i != interface_) { interface_ = i; repaint(); }
-    const int refId = near (in.vuRefDbfs, -20.0) ? kRef20 : near (in.vuRefDbfs, -18.0) ? kRef18 : kRefCustom;
+    const int refId = nearlyEqual (in.vuRefDbfs, -20.0) ? kRef20 : nearlyEqual (in.vuRefDbfs, -18.0) ? kRef18 : kRefCustom;
     if (! ref_.isPopupActive() && ref_.getSelectedId() != kRefCustom) ref_.setSelectedId (refId, juce::dontSendNotification);
     if (ref_.getSelectedId() == 0) ref_.setSelectedId (refId, juce::dontSendNotification);
     setIfIdle (refCustom_, in.vuRefDbfs);

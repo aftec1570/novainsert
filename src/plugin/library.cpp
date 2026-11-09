@@ -253,6 +253,7 @@ DeviceLibrary::LoadStatus DeviceLibrary::load()
         settings_.measureOnOpen = static_cast<bool>(s.getProperty("measureOnOpen", true));
         settings_.skin = skinOf(s);
         settings_.reverseWheel = static_cast<bool>(s.getProperty("reverseWheel", false));
+        settings_.allowAnyDriver = static_cast<bool>(s.getProperty("allowAnyDriver", false));
     }
     juce::var c; std::string cerr;
     const Read cr = readJson(dir_ / "calibrations.json", c, cerr);

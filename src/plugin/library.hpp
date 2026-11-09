@@ -20,7 +20,7 @@ namespace ni::plugin
 constexpr float kOffsetMinDb = -24.0f, kOffsetMaxDb = 12.0f;
 inline float sanitizeOffsetDb(float v) noexcept
 {
-    if (!(v == v) || v > 1e30f || v < -1e30f) return 0.0f;   // NaN / ±inf (JUCE-free, no <cmath> dependency here)
+    if (!(v >= -1e30f && v <= 1e30f)) return 0.0f;   // NaN / ±inf: every comparison with NaN is false (no <cmath> here)
     return v < kOffsetMinDb ? kOffsetMinDb : v > kOffsetMaxDb ? kOffsetMaxDb : v;
 }
 
@@ -43,10 +43,14 @@ struct DeviceRecord
     float sendOffsetDb[2] = { 0.0f, 0.0f }, returnOffsetDb[2] = { 0.0f, 0.0f };
 
     // Exact field equality (DEVICES page dirty tracking, snapshot diff): a stored float equals itself bit for bit.
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wfloat-equal"
+#if defined(__GNUC__)   // clang and gcc
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wfloat-equal"
+#endif
     bool operator==(const DeviceRecord&) const = default;
-#pragma clang diagnostic pop
+#if defined(__GNUC__)
+#pragma GCC diagnostic pop
+#endif
 };
 
 // True when a and b differ only in the CAL defaults (trims, LINK, per-channel offsets) and the version they bump: a project
@@ -81,6 +85,7 @@ struct Settings
     std::string diagnosticsDir;
     bool measureOnOpen = true;   // every instance measures its loop when a project opens; the saved snapshot is the fallback (user 2026-11-06)
     int skin = 0;                // GUI skin, global: 0 Dark / 1 Ivory / 2 Silver; anything else reads as Dark (user 2026-11-06)
+    bool allowAnyDriver = false; // test setups only (Dummy Audio, FlexASIO …): an unsupported REAPER driver is let through, labelled
     bool reverseWheel = false;   // SETUP: turn the trim knobs the other way on the mouse wheel (GitHub #1: a scroll utility that
                                  // reverses the mouse leaves macOS's "natural" flag set, so the knob follows the wrong direction)
 };

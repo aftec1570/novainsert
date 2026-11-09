@@ -1,6 +1,7 @@
 // MeterEngine (plan Task 24, R-GUI-1 meter part): peak, 10 s peak hold, 50 ms RMS, 300 ms VU against the device VU
 // reference, clip (> 0 dBFS, latched 2 s) separate from near-full-scale (≥ −0.1 dBFS). feed() is RT: allocation-free.
 #include <catch2/catch_test_macros.hpp>
+#include <numbers>
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
 #include <cmath>
 #include <vector>
@@ -22,7 +23,7 @@ void sine(MeterEngine& m, float a, double seconds, int64_t& phase)
     for (int64_t done = 0, total = static_cast<int64_t>(seconds * kFs); done < total; done += kBlock)
     {
         for (int i = 0; i < kBlock; ++i)
-            buf[static_cast<size_t>(i)] = a * static_cast<float>(std::sin(2.0 * M_PI * 1000.0 * static_cast<double>(phase + i) / kFs));
+            buf[static_cast<size_t>(i)] = a * static_cast<float>(std::sin(2.0 * std::numbers::pi * 1000.0 * static_cast<double>(phase + i) / kFs));
         phase += kBlock;
         m.feed(buf.data(), buf.data(), kBlock);
     }
@@ -119,7 +120,7 @@ TEST_CASE("meters_rectified_average_of_reference_sine")
     MeterEngine m; m.prepare(kFs);
     int64_t ph = 0;
     sine(m, 0.1f * std::sqrt(2.0f), 1.0, ph);   // RMS −20 dBFS
-    const float want = 0.1f * 2.0f * std::sqrt(2.0f) / float(M_PI);
+    const float want = 0.1f * 2.0f * std::sqrt(2.0f) / std::numbers::pi_v<float>;
     const auto r = m.read(-20.0f);
     CHECK(std::fabs(r.rect[0] - want) < 0.01f * want);
     CHECK(std::fabs(r.rect[1] - want) < 0.01f * want);

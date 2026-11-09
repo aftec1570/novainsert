@@ -1,0 +1,13 @@
+# On a v* tag: the ci.yml build/test/pluginval jobs, then the Windows zip and Linux tar.gz with their sha256 files as
+# workflow artefacts NovaInsert-Windows-x64 and NovaInsert-Linux-x86_64. The release checklist downloads them.
+name: release
+on:
+  push:
+    tags: ['v*']
+
+jobs:
+  release:
+    if: github.repository == 'aftec1570/novainsert-ci'   # the public source view (tools/github_mirror.sh) never builds
+    uses: ./.github/workflows/ci.yml
+    with:
+      package: true
