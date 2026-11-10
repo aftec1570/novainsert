@@ -1,5 +1,5 @@
 // F3 S4 f3_4 fixture oracle (F1 §18 (b): "the independent fixture (F05Loop on the Apollo, same probe)"). Renders the
-// product's measurement probe to a raw float32 file for `F05Loop calibrate --stimulus`, and analyses F05Loop's `--dump`
+// product's measurement probe (the click ping, ProbeSpec::click() - one method, user 2026-11-10) to a raw float32 file for `F05Loop calibrate --stimulus`, and analyses F05Loop's `--dump`
 // capture with the product's matched correlator. The I/O path (CoreAudio HAL IOProc, no REAPER, no hook) is the independent
 // part; probe and estimator are the product's by definition of the analog timing reference (F1 §18 Q13).
 //   ni_probe_lag gen <out.f32> <peakDbfs>
@@ -15,7 +15,7 @@ int main(int argc, char** argv)
 {
     using namespace ni::engine;
     if (argc < 4) { std::fprintf(stderr, "usage: ni_probe_lag gen <out.f32> <peakDbfs> | analyse <capture.f32> <channels>\n"); return 1; }
-    const ProbeGenerator probe { ProbeSpec {} };
+    const ProbeGenerator probe { ProbeSpec::click() };   // the product's only probe since 2026-11-05: the click ping
     if (std::strcmp(argv[1], "gen") == 0)
     {
         std::vector<float> x(static_cast<size_t>(probe.length()));

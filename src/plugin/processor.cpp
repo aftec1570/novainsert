@@ -199,6 +199,7 @@ void NovaInsertProcessor::setIHostApplication (Steinberg::FUnknown* host)
     measurer_ = std::make_unique<ni::plugin::Measurer> (*probeIo_, *corrClient_, sharedProbe(),
         [] { return static_cast<int64_t> (juce::Time::getMillisecondCounterHiRes()); }, 1);
     measurer_->onResult = [this] (uint32_t g, const ni::engine::CalibResult& r) { onMeasured (g, r); };
+    measurer_->programLive = [this] { return playingNow(); };   // the send carries program while playing: silence + drain first
     calPort_ = std::make_unique<EngineCalPort> (*this);
     cal_ = std::make_unique<ni::plugin::CalController> (*calPort_);
     const bool hook = coord_->hooks().installed();

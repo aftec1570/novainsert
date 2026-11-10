@@ -1,9 +1,9 @@
 cmake_minimum_required(VERSION 3.25)
-project(NovaInsert VERSION 1.1.0 LANGUAGES C CXX)
+project(NovaInsert VERSION 1.1.1 LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-# Supported targets (1.1.0): macOS arm64, Windows x64 (MSVC, ASIO), Linux x86_64 (ALSA). NI_PLATFORM_TAG names release assets.
+# Supported targets (1.1.1): macOS arm64, Windows x64 (MSVC, ASIO), Linux x86_64 (ALSA). NI_PLATFORM_TAG names release assets.
 if(APPLE)
   set(CMAKE_OSX_ARCHITECTURES "arm64" CACHE STRING "" FORCE)
   set(CMAKE_OSX_DEPLOYMENT_TARGET "13.0" CACHE STRING "" FORCE)

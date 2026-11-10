@@ -57,6 +57,23 @@ void Measurer::beginAttempt(int64_t settleMs)
     phase_ = Phase::Settle;
     probeIdx_ = 0; results_ = 0; levelDone_ = false; awaited_ = 0; pending_ = false;
     levelDb_ = latLevelDb_ = LevelPolicy::startLevelDb(history_);
+    silenced_ = false;   // a failed attempt disarmed: the program goes out again until silenced
+    silenceIfLive();
+}
+
+// While the transport plays the send carries program until a probe latches, and that program is still in flight round the loop
+// when the probe starts: it lands in the probe's pre-silence (the arrival threshold rises above the click → NoReturn) or after
+// it (a false arrival). So once the program is live, a silent one-sample probe holds the send silent (an armed probe sends
+// silence after its end, never the program) and the settle becomes the L_max drain; the real probe replaces it at arm().
+void Measurer::silenceIfLive()
+{
+    static constexpr float kSilence[1] { 0.0f };
+    if (silenced_ || phase_ != Phase::Settle || ! programLive || ! programLive()) return;
+    io_.setProbe(kSilence, 1);
+    silenced_ = true;
+    phaseStart_ = now_();
+    settleMs_ = std::max(settleMs_, drainMs_);
+    attemptStart_ = phaseStart_ + settleMs_;
 }
 
 void Measurer::arm(int index, float levelDb)
@@ -109,7 +126,8 @@ void Measurer::tick()
     switch (phase_)
     {
         case Phase::Settle:
-            if (now - phaseStart_ >= settleMs_) arm(0, levelDb_);
+            silenceIfLive();   // play may start during the settle
+            if (now_() - phaseStart_ >= settleMs_) arm(0, levelDb_);
             break;
         case Phase::Capture:
         {

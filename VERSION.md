@@ -1,7 +1,24 @@
 # NovaInsert — version history
 
-Latest version: **1.1.0** · [Download the latest release (macOS DMG, Linux tar.gz)](https://github.com/aftec1570/novainsert/releases/latest) ·
+Latest version: **1.1.1** · [Download the latest release (macOS DMG, Linux tar.gz)](https://github.com/aftec1570/novainsert/releases/latest) ·
 [All releases](https://github.com/aftec1570/novainsert/releases) · [Bug and fix ledger](BUGS.md)
+
+## 1.1.1 — 2026-11-10
+
+Bug-fix release for macOS and Linux. Projects, presets (`devices.json`) and settings from 1.0.x and 1.1.0 load unchanged.
+
+- **Fixed: a latency measurement started while the transport plays could fail with "no return".** This happened when a
+  project with measure-on-open was opened during playback, or when an instance was inserted or re-measured while playing.
+  The program that was still travelling round the hardware loop landed in the silence before the measuring click and
+  confused the arrival detection. NovaInsert now holds the send silent and lets the loop drain (about 1.8 s) before it
+  sends the click whenever the transport is playing. Measurements with the transport stopped are unchanged.
+- macOS: validation tier unchanged (hardware-validated on a UA Apollo bench). Linux: functionally validated in a virtual
+  environment; hardware timing validation pending (beta).
+- Windows x64 (ASIO) is not in this release; it follows in a later release.
+
+SHA-256:
+- `NovaInsert-1.1.1-macOS-arm64.dmg`: `7c64d28ebb082e76bab73dc540ac4ec0c9b9f8e73ef8cecc51ec6a247804f14c`
+- `NovaInsert-1.1.1-Linux-x86_64.tar.gz`: `481571ad23c87f3b44915e7e3ba4b69b8b897c09a5a1c071106f6e176f586c4f`
 
 ## 1.1.0 — 2026-11-09
 

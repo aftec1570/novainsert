@@ -9,6 +9,7 @@ Latest version: [download](https://github.com/aftec1570/novainsert/releases/late
 |---|---|---|---|---|
 | [1](https://github.com/aftec1570/novainsert/issues/1) | 2026-11-08 | Mouse wheel direction on trim knobs is reversed | Fixed | 1.0.1 |
 | [2](https://github.com/aftec1570/novainsert/issues/2) | 2026-11-08 | "Interface" in Preset Setup goes back to Apollo when saving a Custom preset | Fixed | 1.0.1 |
+| 3 | 2026-11-10 | Measuring while the transport plays fails with "no return" | Fixed | 1.1.1 |
 
 ## #1 — Mouse wheel direction on trim knobs is reversed
 
@@ -35,3 +36,18 @@ Latest version: [download](https://github.com/aftec1570/novainsert/releases/late
   analog level). Nothing to choose, so nothing can revert. Presets saved with 1.0.0 load unchanged.
 - **Verified:** unit test for the interface line; in REAPER 7.85 a preset saved through PRESET SETUP keeps its typed
   levels and shows "CoreAudio BlackHole 64ch" as reported by REAPER, after SAVE and after reopening.
+
+## #3 — Measuring while the transport plays fails with "no return"
+
+- **Reported:** 2026-11-10, found by the Hillside Studios test bench (UA Apollo, scenario `ap_pdc_running_defer`);
+  reproduced on BlackHole.
+- **Symptom:** a measurement started during playback (project with measure-on-open opened while playing, an instance
+  inserted or re-measured while playing) failed both attempts with "no return".
+- **Root cause:** the program sent until the probe started was still travelling round the hardware loop. It arrived in the
+  click's 20 ms pre-silence and raised the arrival threshold above the click.
+- **Fix (1.1.1):** while the transport plays, NovaInsert holds the send silent from the settle on and extends the settle
+  to the loop drain (post-silence + maximum loop length, about 1.8 s); play starting during the settle is caught at the
+  next tick. Stopped-transport timing is unchanged.
+- **Verified:** two new unit tests (measuring while playing locks the click; play starting during the settle silences the
+  send), failing before the fix and passing after it; full unit suite on release, debug and ASan builds; live in REAPER on
+  BlackHole and on the UA Apollo bench.

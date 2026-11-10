@@ -35,6 +35,11 @@ struct FakeIo final : ProbeIo
     int32_t D[2] { 1000, 1000 };
     float gainDb = 0.0f;
     bool noiseOnly = false;
+    // Transport playing: the send carries loud program (about −12 dBFS) whenever no probe is armed, and that program comes
+    // back D samples later, exactly as the loop returns it while a probe is latched (it is still in flight).
+    bool playing = false;
+    std::optional<int64_t> progEnd;           // the hook sample the send stopped carrying program (first arm while disarmed)
+    int64_t armAt = 0;
 
     int64_t sample = 0;                       // hook sample clock
     const float* armed = nullptr;
@@ -50,11 +55,17 @@ struct FakeIo final : ProbeIo
     void setMuted(bool m) noexcept override { mutes.push_back({ sample, m }); }
     void setProbe(const float* p, int32_t n) noexcept override
     {
-        if (p == nullptr || n <= 0) { if (armed != nullptr) stopAt = sample; armed = nullptr; armedN = 0; captured = 0; return; }
+        if (p == nullptr || n <= 0)
+        {
+            if (armed != nullptr) stopAt = sample;
+            armed = nullptr; armedN = 0; captured = 0; progEnd.reset();   // disarmed: the program goes out again
+            return;
+        }
+        if (armed == nullptr && ! progEnd) progEnd = sample;
         float pk = 0.0f;
         for (int32_t i = 0; i < n; ++i) pk = std::max(pk, std::fabs(p[i]));
         arms.push_back({ sample, 20.0f * std::log10(pk) });
-        armed = p; armedN = n; captured = 0;
+        armed = p; armedN = n; captured = 0; armAt = sample;
     }
     int32_t capturedCount() const noexcept override { return armed != nullptr ? captured : 0; }
     bool captureReturn(float* l, float* r, int32_t n) noexcept override
@@ -79,6 +90,12 @@ private:
                 dst[i] = 0.03f * (static_cast<float>(h & 0xffffu) / 32768.0f - 1.0f);
             }
             else dst[i] = (i >= d && i - d < armedN) ? armed[i - d] * g : 0.0f;
+            if (playing && ! noiseOnly && (! progEnd || armAt + i - d < *progEnd))   // program sent before the send went silent
+            {
+                uint32_t h = static_cast<uint32_t>(armAt + i - d) * 2246822519u ^ (ch * 3266489917u);
+                h ^= h >> 15; h *= 0x2c1b3c6du; h ^= h >> 12;
+                dst[i] += 0.25f * (static_cast<float>(h & 0xffffu) / 32768.0f - 1.0f) * g;
+            }
         }
     }
 };
@@ -361,4 +378,39 @@ TEST_CASE("measurer_click_stereo_locks_both_channels")
     REQUIRE(r.got[0].physLoop[0] == 777);
     REQUIRE(r.got[0].physLoop[1] == 777);
     REQUIRE(r.doneAt <= 1000);
+}
+
+// Bug 2026-11-10 (Apollo ap_pdc_running_defer): a measurement started while the transport plays failed NoReturn twice. The
+// program sent just before the probe latched was still in flight round the loop, landed in the probe's pre-silence and raised
+// the arrival threshold above the click. While the program is live the Measurer silences the send and waits out the loop
+// (L_max) before the probe, so no program can reach the probe's capture.
+TEST_CASE("measurer_click_locks_while_the_transport_plays")
+{
+    for (int32_t D : { 300, 4500, 20000 })   // up to the click window (0.47 s)
+    {
+        CAPTURE(D);
+        ClickRig r;
+        r.io.D[0] = r.io.D[1] = D;
+        r.io.playing = true;
+        r.m.programLive = [] { return true; };
+        r.m.start(8, unknown(), true, 128);
+        REQUIRE(r.runUntilResult(6000));
+        REQUIRE(r.got[0].failReason == Reason::None);
+        REQUIRE(r.got[0].physLoop[0] == D);
+        REQUIRE(r.got[0].physLoop[1] == D);
+        REQUIRE(r.doneAt <= 4000);   // one drain (post-silence + L_max ≈ 1.8 s) + the stopped-transport click time
+    }
+}
+
+TEST_CASE("measurer_click_silences_the_send_when_play_starts_during_the_settle")
+{
+    ClickRig r;
+    r.io.D[0] = r.io.D[1] = 2000;
+    bool live = false;
+    r.m.programLive = [&live] { return live; };
+    r.m.start(9, unknown(), false, 128);
+    live = true; r.io.playing = true;   // play pressed before the first tick
+    REQUIRE(r.runUntilResult(6000));
+    REQUIRE(r.got[0].failReason == Reason::None);
+    REQUIRE(r.got[0].physLoop[0] == 2000);
 }

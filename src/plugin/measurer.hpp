@@ -79,6 +79,8 @@ public:
     Progress progress() const;
 
     std::function<void(uint32_t gen, const engine::CalibResult&)> onResult;
+    // True while the send carries program (transport playing). Empty = never. Message thread, polled from start() and tick().
+    std::function<bool()> programLive;
 
 private:
     enum class Phase : uint8_t { Idle, Settle, Capture, AwaitLevel, Tail };
@@ -90,6 +92,7 @@ private:
     void attemptFailed(engine::Reason why, bool drainBeforeUnmute);
     void finish(const engine::CalibResult& r, bool drainBeforeUnmute);
     void stopProbe(bool drainBeforeUnmute);
+    void silenceIfLive();
     int32_t windowEnd(int32_t captured) noexcept;   // samples to analyse now, 0 = keep listening, −1 = no arrival in the window
 
     ProbeIo& io_;
@@ -113,6 +116,7 @@ private:
     bool levelDone_ = false;
     int64_t totalStart_ = 0, attemptStart_ = 0, phaseStart_ = 0, unmuteAt_ = -1, settleMs_ = kSettleMs;
     bool muted_ = false;
+    bool silenced_ = false;   // this attempt's send is held silent (program live): its settle is the L_max drain
     uint64_t nextToken_ = 0, awaited_ = 0, inFlight_ = 0;
     int awaitedIdx_ = 0;
     bool pending_ = false;

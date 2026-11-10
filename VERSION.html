@@ -10,7 +10,19 @@ h1{font-size:28px;letter-spacing:.02em;margin:0 0 12px} h2{font-size:19px;margin
 a{color:var(--accent)} code{font:14px ui-monospace,Menlo,monospace} li{margin:6px 0} p:first-of-type{color:var(--dim)}
 </style></head><body><main>
 <h1>NovaInsert — version history</h1>
-<p>Latest version: <strong>1.1.0</strong> · <a href="https://github.com/aftec1570/novainsert/releases/latest">Download the latest release (macOS DMG, Linux tar.gz)</a> · <a href="https://github.com/aftec1570/novainsert/releases">All releases</a> · <a href="https://github.com/aftec1570/novainsert/blob/main/BUGS.md">Bug and fix ledger</a></p>
+<p>Latest version: <strong>1.1.1</strong> · <a href="https://github.com/aftec1570/novainsert/releases/latest">Download the latest release (macOS DMG, Linux tar.gz)</a> · <a href="https://github.com/aftec1570/novainsert/releases">All releases</a> · <a href="https://github.com/aftec1570/novainsert/blob/main/BUGS.md">Bug and fix ledger</a></p>
+<h2>1.1.1 — 2026-11-10</h2>
+<p>Bug-fix release for macOS and Linux. Projects, presets (<code>devices.json</code>) and settings from 1.0.x and 1.1.0 load unchanged.</p>
+<ul>
+<li><strong>Fixed: a latency measurement started while the transport plays could fail with "no return".</strong> This happened when a project with measure-on-open was opened during playback, or when an instance was inserted or re-measured while playing. The program that was still travelling round the hardware loop landed in the silence before the measuring click and confused the arrival detection. NovaInsert now holds the send silent and lets the loop drain (about 1.8 s) before it sends the click whenever the transport is playing. Measurements with the transport stopped are unchanged.</li>
+<li>macOS: validation tier unchanged (hardware-validated on a UA Apollo bench). Linux: functionally validated in a virtual environment; hardware timing validation pending (beta).</li>
+<li>Windows x64 (ASIO) is not in this release; it follows in a later release.</li>
+</ul>
+<p>SHA-256:</p>
+<ul>
+<li><code>NovaInsert-1.1.1-macOS-arm64.dmg</code>: <code>7c64d28ebb082e76bab73dc540ac4ec0c9b9f8e73ef8cecc51ec6a247804f14c</code></li>
+<li><code>NovaInsert-1.1.1-Linux-x86_64.tar.gz</code>: <code>481571ad23c87f3b44915e7e3ba4b69b8b897c09a5a1c071106f6e176f586c4f</code></li>
+</ul>
 <h2>1.1.0 — 2026-11-09</h2>
 <p>Linux release. Projects, presets (<code>devices.json</code>) and settings from 1.0.x load unchanged on every platform.</p>
 <ul>

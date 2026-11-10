@@ -1,10 +1,10 @@
 # NovaInsert
 
 **A REAPER-only VST3 hardware insert for macOS (Apple silicon) and Linux (x86_64) that measures its own latency.**
-Version 1.1.0 · by [Hillside Studios](https://hillsidestudio.io) · free to use, provided as is without any warranty (see [License](#license)).
+Version 1.1.1 · by [Hillside Studios](https://hillsidestudio.io) · free to use, provided as is without any warranty (see [License](#license)).
 
-**[Download NovaInsert 1.1.0](https://github.com/aftec1570/novainsert/releases/latest)**: macOS (signed and notarized DMG) ·
-Linux x86_64 (tar.gz, beta) · Windows x64 follows in 1.1.1 ·
+**[Download NovaInsert 1.1.1](https://github.com/aftec1570/novainsert/releases/latest)**: macOS (signed and notarized DMG) ·
+Linux x86_64 (tar.gz, beta) · Windows x64 follows in a later release ·
 [User manual](docs/manual/NovaInsert-User-Manual.md) ([PDF](docs/manual/NovaInsert-User-Manual.pdf))
 
 ![NovaInsert in REAPER](docs/manual/img/reaper_window.png)
@@ -63,7 +63,7 @@ You are responsible for the routing, the monitoring level and the hardware. See 
 | Loop length | up to 65 536 samples |
 
 **Audio driver.** NovaInsert works only on REAPER's native driver for the platform: CoreAudio on macOS, ALSA on Linux
-(ASIO on Windows from 1.1.1). On any other driver (JACK, PulseAudio, Dummy Audio, …) it does not arm or measure and shows
+(ASIO on Windows in a later release). On any other driver (JACK, PulseAudio, Dummy Audio, …) it does not arm or measure and shows
 "REAPER's audio driver is not supported. NovaInsert needs ASIO on Windows / ALSA on Linux". Switch REAPER to the native
 driver in Options → Preferences → Audio → Device.
 
@@ -74,17 +74,17 @@ validated in a virtual environment; hardware timing validation pending (beta). R
 
 ### macOS
 
-1. Download `NovaInsert-1.1.0-macOS-arm64.dmg` from the [release page](https://github.com/aftec1570/novainsert/releases/latest).
-2. Open the DMG and double-click "Install NovaInsert 1.1.0.pkg".
+1. Download `NovaInsert-1.1.1-macOS-arm64.dmg` from the [release page](https://github.com/aftec1570/novainsert/releases/latest).
+2. Open the DMG and double-click "Install NovaInsert 1.1.1.pkg".
 3. Read and accept the license agreement; the installer copies the plug-in to `/Library/Audio/Plug-Ins/VST3`.
    The package is signed with an Apple Developer ID and notarized by Apple, so macOS opens it without a security prompt.
 4. In REAPER: Options → Preferences → Plug-ins → VST → "Re-scan". Add "VST3: NovaInsert (Hillside Studios)" to a track.
 
 ### Linux (beta)
 
-1. Download `NovaInsert-1.1.0-Linux-x86_64.tar.gz` and its `.sha256` from the
+1. Download `NovaInsert-1.1.1-Linux-x86_64.tar.gz` and its `.sha256` from the
    [release page](https://github.com/aftec1570/novainsert/releases/latest); check it with `sha256sum -c *.sha256`.
-2. `tar xzf NovaInsert-1.1.0-Linux-x86_64.tar.gz && ./install.sh` copies the plug-in to `~/.vst3` (no sudo). For all
+2. `tar xzf NovaInsert-1.1.1-Linux-x86_64.tar.gz && ./install.sh` copies the plug-in to `~/.vst3` (no sudo). For all
    users, copy `NovaInsert.vst3` to `/usr/lib/vst3/` instead.
 3. In REAPER: select the ALSA driver and a specific device, then Options → Preferences → Plug-ins → VST → "Re-scan".
 
@@ -276,10 +276,10 @@ pass have no hardware return yet. NovaInsert reports the gap instead of hiding i
 | Re-apply anticipative FX fix | trigger | the same as the button |
 | State, Physical loop, Reported PDC, Inherent gap, CAL action, CAL status | read only | for scripts and controllers |
 
-## Limitations of version 1.1.0
+## Limitations of version 1.1.1
 
 - 48 kHz, REAPER 7.83 or newer (validated on 7.83 and 7.85), VST3 only.
-- macOS Apple silicon and Linux x86_64 only; Windows x64 follows in 1.1.1. CoreAudio (macOS) and ALSA (Linux) only.
+- macOS Apple silicon and Linux x86_64 only; Windows x64 follows in a later release. CoreAudio (macOS) and ALSA (Linux) only.
 - Linux is functionally validated in a virtual environment; hardware timing validation pending (beta).
 - Presets are stored by position: deleting one shifts the later ones in projects not reopened since.
 - The first "loop length" samples of each play or render pass have no hardware return.
