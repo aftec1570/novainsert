@@ -1,7 +1,24 @@
 # NovaInsert — version history
 
-Latest version: **1.1.1** · [Download the latest release (macOS DMG, Linux tar.gz)](https://github.com/aftec1570/novainsert/releases/latest) ·
+Latest version: **1.2.0** · [Download the latest release (macOS DMG, Windows zip, Linux tar.gz)](https://github.com/aftec1570/novainsert/releases/latest) ·
 [All releases](https://github.com/aftec1570/novainsert/releases) · [Bug and fix ledger](BUGS.md)
+
+## 1.2.0 — 2026-11-10
+
+Windows release. Projects, presets (`devices.json`) and settings from 1.0.x and 1.1.x load unchanged on every platform.
+
+- **New: Windows x64 build** (`NovaInsert-1.2.0-Windows-x64.zip`, Windows 10 or 11, 64-bit, ASIO). Unpack it and copy
+  `NovaInsert.vst3` to `C:\Program Files\Common Files\VST3\`. The zip is not code-signed; check it against its SHA-256.
+- Windows validation: real hardware, an RME Babyface Pro on its native ASIO driver with analog cable loops: latency
+  measurement at buffer sizes 64 to 512, delay compensation changes, online render and fault handling. Other ASIO
+  interfaces and outboard have not been tested yet; reports are welcome.
+- macOS and Linux: no functional change from 1.1.1; validation tiers unchanged (macOS hardware-validated on a UA Apollo
+  bench; Linux functionally validated in a virtual environment, hardware timing validation pending, beta).
+
+SHA-256:
+- `NovaInsert-1.2.0-macOS-arm64.dmg`: `3e4d7fad0acd1512183a97ea4b232e59158f32eb55019f27fa4198950c3c5d30`
+- `NovaInsert-1.2.0-Windows-x64.zip`: `7ff5b6628313f850dee25aac934c6a0bcfc642a52e5e8403b0009e842f56616b`
+- `NovaInsert-1.2.0-Linux-x86_64.tar.gz`: `a007eae36d928ffc30ececfa92f945cd367034fd783a86057ed05c49b40a1aaf`
 
 ## 1.1.1 — 2026-11-10
 

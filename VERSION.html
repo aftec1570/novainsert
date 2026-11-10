@@ -10,7 +10,20 @@ h1{font-size:28px;letter-spacing:.02em;margin:0 0 12px} h2{font-size:19px;margin
 a{color:var(--accent)} code{font:14px ui-monospace,Menlo,monospace} li{margin:6px 0} p:first-of-type{color:var(--dim)}
 </style></head><body><main>
 <h1>NovaInsert — version history</h1>
-<p>Latest version: <strong>1.1.1</strong> · <a href="https://github.com/aftec1570/novainsert/releases/latest">Download the latest release (macOS DMG, Linux tar.gz)</a> · <a href="https://github.com/aftec1570/novainsert/releases">All releases</a> · <a href="https://github.com/aftec1570/novainsert/blob/main/BUGS.md">Bug and fix ledger</a></p>
+<p>Latest version: <strong>1.2.0</strong> · <a href="https://github.com/aftec1570/novainsert/releases/latest">Download the latest release (macOS DMG, Windows zip, Linux tar.gz)</a> · <a href="https://github.com/aftec1570/novainsert/releases">All releases</a> · <a href="https://github.com/aftec1570/novainsert/blob/main/BUGS.md">Bug and fix ledger</a></p>
+<h2>1.2.0 — 2026-11-10</h2>
+<p>Windows release. Projects, presets (<code>devices.json</code>) and settings from 1.0.x and 1.1.x load unchanged on every platform.</p>
+<ul>
+<li><strong>New: Windows x64 build</strong> (<code>NovaInsert-1.2.0-Windows-x64.zip</code>, Windows 10 or 11, 64-bit, ASIO). Unpack it and copy <code>NovaInsert.vst3</code> to <code>C:\Program Files\Common Files\VST3\</code>. The zip is not code-signed; check it against its SHA-256.</li>
+<li>Windows validation: real hardware, an RME Babyface Pro on its native ASIO driver with analog cable loops: latency measurement at buffer sizes 64 to 512, delay compensation changes, online render and fault handling. Other ASIO interfaces and outboard have not been tested yet; reports are welcome.</li>
+<li>macOS and Linux: no functional change from 1.1.1; validation tiers unchanged (macOS hardware-validated on a UA Apollo bench; Linux functionally validated in a virtual environment, hardware timing validation pending, beta).</li>
+</ul>
+<p>SHA-256:</p>
+<ul>
+<li><code>NovaInsert-1.2.0-macOS-arm64.dmg</code>: <code>3e4d7fad0acd1512183a97ea4b232e59158f32eb55019f27fa4198950c3c5d30</code></li>
+<li><code>NovaInsert-1.2.0-Windows-x64.zip</code>: <code>7ff5b6628313f850dee25aac934c6a0bcfc642a52e5e8403b0009e842f56616b</code></li>
+<li><code>NovaInsert-1.2.0-Linux-x86_64.tar.gz</code>: <code>a007eae36d928ffc30ececfa92f945cd367034fd783a86057ed05c49b40a1aaf</code></li>
+</ul>
 <h2>1.1.1 — 2026-11-10</h2>
 <p>Bug-fix release for macOS and Linux. Projects, presets (<code>devices.json</code>) and settings from 1.0.x and 1.1.0 load unchanged.</p>
 <ul>
