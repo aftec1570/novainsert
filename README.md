@@ -1,9 +1,9 @@
 # NovaInsert
 
 **A REAPER-only VST3 hardware insert for macOS (Apple silicon), Windows (x64) and Linux (x86_64) that measures its own latency.**
-Version 1.2.0 · by [Hillside Studios](https://hillsidestudio.io) · free to use, provided as is without any warranty (see [License](#license)).
+Version 1.2.1 · by [Hillside Studios](https://hillsidestudio.io) · free to use, provided as is without any warranty (see [License](#license)).
 
-**[Download NovaInsert 1.2.0](https://github.com/aftec1570/novainsert/releases/latest)**: macOS (signed and notarized DMG) ·
+**[Download NovaInsert 1.2.1](https://github.com/aftec1570/novainsert/releases/latest)**: macOS (signed and notarized DMG) ·
 Windows x64 (zip) · Linux x86_64 (tar.gz, beta) ·
 [User manual](docs/manual/NovaInsert-User-Manual.md) ([PDF](docs/manual/NovaInsert-User-Manual.pdf))
 
@@ -63,9 +63,12 @@ You are responsible for the routing, the monitoring level and the hardware. See 
 | Loop length | up to 65 536 samples |
 
 **Audio driver.** NovaInsert works only on REAPER's native driver for the platform: CoreAudio on macOS, ASIO on Windows,
-ALSA on Linux. On any other driver (WASAPI, DirectSound, JACK, PulseAudio, Dummy Audio, …) it does not arm or measure and shows
+ALSA on Linux. On any other driver (JACK, PulseAudio, Dummy Audio, …) it does not arm or measure and shows
 "REAPER's audio driver is not supported. NovaInsert needs ASIO on Windows / ALSA on Linux". Switch REAPER to the native
 driver in Options → Preferences → Audio → Device.
+On Windows the ASIO driver must be the interface's own: ASIO4ALL and FlexASIO count as unsupported too. On an unsupported
+Windows driver (WASAPI, WaveOut, DirectSound, ASIO4ALL, FlexASIO, …) NovaInsert bypasses itself (the track plays dry) and
+shows "Audio driver not supported, NovaInsert is bypassed. Use the interface's own ASIO driver (not ASIO4ALL or FlexASIO)".
 
 **Validation.** macOS is validated on real hardware (a UA Apollo with analog outboard loops). Windows is validated on real hardware with an RME Babyface Pro on its native ASIO driver and analog cable loops (latency measurement at buffer sizes 64 to 512, delay compensation changes, online render, fault handling); other ASIO interfaces and outboard have not been tested yet, and reports are welcome. Linux is functionally
 validated in a virtual environment; hardware timing validation pending (beta). Reports from real ALSA interfaces are welcome.
@@ -74,17 +77,17 @@ validated in a virtual environment; hardware timing validation pending (beta). R
 
 ### macOS
 
-1. Download `NovaInsert-1.2.0-macOS-arm64.dmg` from the [release page](https://github.com/aftec1570/novainsert/releases/latest).
-2. Open the DMG and double-click "Install NovaInsert 1.2.0.pkg".
+1. Download `NovaInsert-1.2.1-macOS-arm64.dmg` from the [release page](https://github.com/aftec1570/novainsert/releases/latest).
+2. Open the DMG and double-click "Install NovaInsert 1.2.1.pkg".
 3. Read and accept the license agreement; the installer copies the plug-in to `/Library/Audio/Plug-Ins/VST3`.
    The package is signed with an Apple Developer ID and notarized by Apple, so macOS opens it without a security prompt.
 4. In REAPER: Options → Preferences → Plug-ins → VST → "Re-scan". Add "VST3: NovaInsert (Hillside Studios)" to a track.
 
 ### Windows
 
-1. Download `NovaInsert-1.2.0-Windows-x64.zip` and its `.sha256` from the
+1. Download `NovaInsert-1.2.1-Windows-x64.zip` and its `.sha256` from the
    [release page](https://github.com/aftec1570/novainsert/releases/latest); check it in PowerShell with
-   `Get-FileHash NovaInsert-1.2.0-Windows-x64.zip` against the value in the `.sha256` file.
+   `Get-FileHash NovaInsert-1.2.1-Windows-x64.zip` against the value in the `.sha256` file.
 2. Unpack the zip and copy the folder `NovaInsert.vst3` to `C:\Program Files\Common Files\VST3\` (needs administrator rights).
    The zip is not code-signed, so Windows or your browser may warn about an unknown publisher.
 3. In REAPER: select the ASIO driver of your interface (Options → Preferences → Audio → Device), then
@@ -92,9 +95,9 @@ validated in a virtual environment; hardware timing validation pending (beta). R
 
 ### Linux (beta)
 
-1. Download `NovaInsert-1.2.0-Linux-x86_64.tar.gz` and its `.sha256` from the
+1. Download `NovaInsert-1.2.1-Linux-x86_64.tar.gz` and its `.sha256` from the
    [release page](https://github.com/aftec1570/novainsert/releases/latest); check it with `sha256sum -c *.sha256`.
-2. `tar xzf NovaInsert-1.2.0-Linux-x86_64.tar.gz && ./install.sh` copies the plug-in to `~/.vst3` (no sudo). For all
+2. `tar xzf NovaInsert-1.2.1-Linux-x86_64.tar.gz && ./install.sh` copies the plug-in to `~/.vst3` (no sudo). For all
    users, copy `NovaInsert.vst3` to `/usr/lib/vst3/` instead.
 3. In REAPER: select the ALSA driver and a specific device, then Options → Preferences → Plug-ins → VST → "Re-scan".
 
@@ -286,7 +289,7 @@ pass have no hardware return yet. NovaInsert reports the gap instead of hiding i
 | Re-apply anticipative FX fix | trigger | the same as the button |
 | State, Physical loop, Reported PDC, Inherent gap, CAL action, CAL status | read only | for scripts and controllers |
 
-## Limitations of version 1.2.0
+## Limitations of version 1.2.1
 
 - 48 kHz, REAPER 7.83 or newer (validated on 7.83 and 7.85), VST3 only.
 - macOS Apple silicon, Windows x64 and Linux x86_64 only. CoreAudio (macOS), ASIO (Windows) and ALSA (Linux) only.

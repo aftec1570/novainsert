@@ -88,6 +88,8 @@ struct Settings
     bool allowAnyDriver = false; // test setups only (Dummy Audio, FlexASIO …): an unsupported REAPER driver is let through, labelled
     bool reverseWheel = false;   // SETUP: turn the trim knobs the other way on the mouse wheel (GitHub #1: a scroll utility that
                                  // reverses the mouse leaves macOS's "natural" flag set, so the knob follows the wrong direction)
+    int meterView = 0;           // meter rocker, global: 0 VU / 1 TUBE / 2 LED / 3 TWIN; anything else reads as VU (forum report 2026-11-12)
+    int meterUnit = 0;           // meter unit, global: 0 dBu / 1 dBFS; anything else reads as dBu
 };
 
 // Channel names the host reports for a record's channels ([0]/[1] = L/R; empty when unknown or mono R) — part of the key, so a
@@ -125,6 +127,8 @@ public:
     bool setMeasureOnOpen(bool on);
     bool setSkin(int skin);           // SETUP skin selector: same atomic, keep-other-keys write as setMeasureOnOpen
     bool setReverseWheel(bool on);    // SETUP mouse-wheel direction: same write as setMeasureOnOpen
+    bool setMeterView(int view);      // meter rocker (VU/TUBE/LED/TWIN): same write; out of range stores 0
+    bool setMeterUnit(int unit);      // meter unit (dBu/dBFS): same write; out of range stores 0
     void reloadSettings();            // ≤ 1 Hz from the editor poll: picks up measureOnOpen / skin set by another instance; a broken file keeps the last value   // SETUP toggle: settings.json rewritten atomically, other keys kept; false = not written (warning added)
     const std::vector<std::string>& warnings() const noexcept { return warnings_; }
     const std::filesystem::path& dir() const noexcept { return dir_; }

@@ -9,8 +9,6 @@ namespace ni::gui
 namespace
 {
 int gSizePercent = 100;   // editor size step: a UI preference shared by all instances of this process (not saved in the project)
-int gMeterView = 0;       // VU faces (0) or a bar look TUBE/LED/TWIN (1-3, MeterView): the same kind of per-process preference (meter view design 2026-11-05)
-int gMeterUnit = 0;       // dBu (0) or dBFS (1) on both meters (user 2026-11-05)
 constexpr double kSlowPeriod = 0.125;   // texts / readouts at 8 Hz
 }
 
@@ -37,10 +35,6 @@ NovaInsertEditor::NovaInsertEditor (NovaInsertProcessor& p) : juce::AudioProcess
     panel_.onCal = [this] (int a) { proc_.pressCal (a); };
     panel_.onReapply = [this] { proc_.reapplyAnticipativeFromGui(); };
     panel_.onRecalibrate = [this] { proc_.recalibrateFromGui(); };
-    panel_.setMeterView (gMeterView);
-    panel_.onMeterView = [] (int v) { gMeterView = v; };
-    panel_.setMeterUnit (gMeterUnit);
-    panel_.onMeterUnit = [] (int u) { gMeterUnit = u; };
     panel_.setup.onConverter = [this] (const SetupPanel::Converter& c) { proc_.setConverterCal (c.sendDbu, c.returnDbu, c.vuRef, c.outboardMax); };
     panel_.setup.onOffsets = [this] (std::array<float, 2> s, std::array<float, 2> r) { proc_.setOffsets (s, r); };
     panel_.setup.onApplyDefaults = [this] { proc_.applyDeviceDefaults(); };
@@ -51,6 +45,12 @@ NovaInsertEditor::NovaInsertEditor (NovaInsertProcessor& p) : juce::AudioProcess
     panel_.devices.onSave = [this] (const ni::plugin::DeviceRecord& r) { return proc_.saveDevice (r); };
     panel_.devices.onDelete = [this] (const std::string& id) { return proc_.deleteDevice (id); };
     proc_.pollLibrary();
+    // Meter view (VU/TUBE/LED/TWIN) and unit (dBu/dBFS): global settings.json values, read after the poll so another
+    // instance's choice is current; kept across REAPER restarts (forum report 2026-11-12: LED came back as VU).
+    panel_.setMeterView (proc_.meterView());
+    panel_.onMeterView = [this] (int v) { proc_.setMeterView (v); };
+    panel_.setMeterUnit (proc_.meterUnit());
+    panel_.onMeterUnit = [this] (int u) { proc_.setMeterUnit (u); };
 
     // Free resize from the bottom-right corner (aspect locked, 50 % … 300 % of the 780 × 560 base); SETUP's size buttons jump to
     // the fixed steps. Everything is vector-drawn and scaled by one transform in resized(), so any size (and any display scale,

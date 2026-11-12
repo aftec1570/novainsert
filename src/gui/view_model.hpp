@@ -53,7 +53,12 @@ inline std::string reasonText(engine::Reason r)
         case R::LagMismatch: return "Repeated probes disagreed";
         case R::ChannelAsymmetry: return "Left and right loops differ";
         case R::UserRequest: return "Re-calibration requested";
+#if defined(_WIN32)
+        case R::DriverUnsupported: return "Audio driver not supported, NovaInsert is bypassed. Use the interface's own ASIO driver (not ASIO4ALL or FlexASIO)";
+#else
         case R::DriverUnsupported: return "REAPER's audio driver is not supported. NovaInsert needs ASIO on Windows / ALSA on Linux";
+#endif
+        case R::ChannelNotDelivered: return "REAPER delivers no audio on this preset's channel. Enable it in Preferences > Audio > Device (input/output range)";
     }
     return "Unknown reason";
 }
@@ -116,6 +121,7 @@ struct ViewInputs
     std::string hostVersion;                   // GetAppVersion(), e.g. "7.83/macOS-arm64"; empty = unknown
     std::string driverMode;                    // GetAudioDeviceInfo("MODE") (1.1.0 driver gate)
     bool driverOverride = false;               // allowAnyDriver let an unsupported driver through (test setups only)
+    std::string missingChannel;                // ChannelNotDelivered: the 1-based channel REAPER does not deliver, e.g. "input 25"
     // Level CAL / VU (VU GUI spec 2026-11-02)
     bool sendStereo = false, retStereo = false;        // effective widths (what the loop, meters and readouts run on)
     bool recSendStereo = false, recReturnStereo = false;   // record widths: a STEREO direction shows its STEREO | L | R selector
@@ -243,6 +249,8 @@ struct ViewModel
         }
         if (in.reason == engine::Reason::DriverUnsupported) vm.warnings.push_back("Audio driver: " + in.driverMode);
         if (in.driverOverride) vm.warnings.push_back("TEST DRIVER: " + in.driverMode);
+        if (in.reason == engine::Reason::ChannelNotDelivered && !in.missingChannel.empty())
+            vm.warnings.push_back("Not delivered by REAPER: " + in.missingChannel);
         for (const auto& t : in.anticipativeViolationTracks) vm.warnings.push_back("Anticipative FX re-enabled on " + t);
         if (!in.conflictWith.empty()) vm.warnings.push_back("Device in use by " + in.conflictWith);
         if (in.renderLeftAt >= 0) vm.warnings.push_back("Render speed left at " + std::to_string(in.renderLeftAt));

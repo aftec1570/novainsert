@@ -83,14 +83,14 @@ TEST_CASE("view_model_lead_in_hint")
 TEST_CASE("view_model_failure_reason_text_for_every_reason")
 {
     std::set<std::string> seen;
-    for (int r = static_cast<int>(Reason::ProjectLoad); r <= static_cast<int>(Reason::DriverUnsupported); ++r)
+    for (int r = static_cast<int>(Reason::ProjectLoad); r <= static_cast<int>(Reason::ChannelNotDelivered); ++r)
     {
         const std::string t = reasonText(static_cast<Reason>(r));
         INFO(r);
         REQUIRE_FALSE(t.empty());
         seen.insert(t);
     }
-    REQUIRE(seen.size() == 28);   // 28 distinct strings
+    REQUIRE(seen.size() == 29);   // 29 distinct strings
     REQUIRE(reasonText(Reason::None).empty());
     ViewInputs in = base();
     in.state = State::Failed; in.reason = Reason::NoReturn;
@@ -355,13 +355,23 @@ TEST_CASE("view_model_interface_text_is_the_device_reaper_reports")
 
 TEST_CASE("view model: DriverUnsupported text and driver warnings", "[view_model]")
 {
+#if defined(_WIN32)
+    REQUIRE(reasonText(Reason::DriverUnsupported) == "Audio driver not supported, NovaInsert is bypassed. Use the interface's own ASIO driver (not ASIO4ALL or FlexASIO)");
+#else
     REQUIRE(reasonText(Reason::DriverUnsupported) == "REAPER's audio driver is not supported. NovaInsert needs ASIO on Windows / ALSA on Linux");
+#endif
     auto has = [](const ViewModel& vm, const std::string& w) { return std::find(vm.warnings.begin(), vm.warnings.end(), w) != vm.warnings.end(); };
     ViewInputs in;
     in.state = State::Unavailable; in.reason = Reason::DriverUnsupported; in.driverMode = "WASAPI";
     REQUIRE(has(ViewModel::from(in), "Audio driver: WASAPI"));
+    in.driverMode = "ASIO (ASIO4ALL)";
+    REQUIRE(has(ViewModel::from(in), "Audio driver: ASIO (ASIO4ALL)"));
     ViewInputs ov;
     ov.driverOverride = true; ov.driverMode = "Dummy Audio";
     REQUIRE(has(ViewModel::from(ov), "TEST DRIVER: Dummy Audio"));
     REQUIRE_FALSE(has(ViewModel::from(ViewInputs {}), "TEST DRIVER: "));
+    ViewInputs nd;
+    nd.state = State::Unavailable; nd.reason = Reason::ChannelNotDelivered; nd.missingChannel = "input 25";
+    REQUIRE(has(ViewModel::from(nd), "Not delivered by REAPER: input 25"));
+    REQUIRE(reasonText(Reason::ChannelNotDelivered).find("Preferences > Audio > Device") != std::string::npos);
 }

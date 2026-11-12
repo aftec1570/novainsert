@@ -120,4 +120,23 @@ DriverVerdict driverVerdict(const std::string& mode) noexcept
     return DriverVerdict::Supported;
 }
 
+std::string genericAsioWrapper(const std::string& s)
+{
+    std::string lower(s);
+    for (auto& c : lower) c = (c >= 'A' && c <= 'Z') ? static_cast<char>(c - 'A' + 'a') : c;
+    if (lower.find("asio4all") != std::string::npos) return "ASIO4ALL";
+    if (lower.find("flexasio") != std::string::npos) return "FlexASIO";
+    return {};
+}
+
+DriverVerdict deviceDriverVerdict(const DeviceKey& k, bool rejectWrappers)
+{
+    if (rejectWrappers)
+        for (const auto* s : { &k.mode, &k.identIn, &k.identOut })
+            if (! genericAsioWrapper(*s).empty()) return DriverVerdict::Unsupported;
+    return driverVerdict(k.mode);
+}
+
+DriverVerdict deviceDriverVerdict(const DeviceKey& k) { return deviceDriverVerdict(k, platform::kWindowsDriverRules); }
+
 } // namespace ni::host

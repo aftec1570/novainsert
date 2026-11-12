@@ -256,10 +256,78 @@ TEST_CASE("stats report the host's channel counts and the first channel whose bu
     g_nullIdx = 2;
     h.feed(64);
     REQUIRE(h.d.stats().firstNullChannel == 2);
-    REQUIRE(h.d.stats().nullBufferStreak == 1);
+    REQUIRE(h.d.stats().nullInputs == 1);
+    REQUIRE(h.d.stats().nullOutputs == 1);
+    REQUIRE(h.d.stats().nullBufferStreak == 0);   // one undelivered channel is not a null cycle (forum report 2026-11-12)
     g_nullIdx = -1;
     h.feed(64);
     REQUIRE(h.d.stats().firstNullChannel == -1);
+    REQUIRE(h.d.stats().nullInputs == 0);
+}
+
+namespace
+{
+int g_deliveredIn = kCh;   // inputs at or past this index are null (REAPER's enabled input range ends there)
+ReaSample* fakeGetBufferRange(bool isOutput, int idx)
+{
+    if (!isOutput && idx >= g_deliveredIn) return nullptr;
+    return fakeGetBuffer(isOutput, idx);
+}
+struct ChannelClient : IHookClient
+{
+    int pre = 0, post = 0;
+    const ReaSample* in[kCh] {};
+    void onPre(int64_t, int, const ReaSample* const* b, int n) noexcept override { ++pre; for (int i = 0; i < n && i < kCh; ++i) in[i] = b[i]; }
+    void onPost(int64_t, int, ReaSample* const*, int) noexcept override { ++post; }
+};
+}
+
+// Forum report 2026-11-12 (Yamaha Steinberg FW ASIO, REAPER 7.85): REAPER reported 40 inputs and returned null from input 24 on,
+// every cycle; the dispatcher called that a lost device and no instance ever ran. Undelivered channels are now per channel.
+TEST_CASE("inputs outside REAPER's delivered range are not a device loss; the clients run and see them as null")
+{
+    Harness h; ChannelClient c; h.d.registerClient(&c);
+    h.reg.GetBuffer = &fakeGetBufferRange; g_deliveredIn = 2;
+    REQUIRE(h.d.channelDelivered(false, 3));    // unknown before the first good cycle
+    for (int i = 0; i < 60; ++i) { g_nowNs += 1'333'333; h.feed(64); }   // 80 ms of cycles ...
+    g_nowNs += 600'000'000; h.feed(64);         // ... and well past the 500 ms loss mark
+    REQUIRE(h.events.empty());
+    REQUIRE_FALSE(h.d.deviceLostNow());
+    REQUIRE(h.d.stats().nullBufferStreak == 0);
+    REQUIRE(c.pre == 61); REQUIRE(c.post == 61);
+    REQUIRE(c.in[0] == g_in[0]); REQUIRE(c.in[1] == g_in[1]);
+    REQUIRE(c.in[2] == nullptr); REQUIRE(c.in[3] == nullptr);
+    REQUIRE(h.d.channelDelivered(false, 1));
+    REQUIRE_FALSE(h.d.channelDelivered(false, 2));
+    REQUIRE_FALSE(h.d.channelDelivered(false, 3));
+    REQUIRE(h.d.channelDelivered(true, 3));     // every output is delivered
+    REQUIRE(h.d.stats().firstNullChannel == 2);
+    REQUIRE(h.d.stats().nullInputs == 2);
+    {
+        AllocGuard g;                           // a partial-null cycle allocates nothing
+        REQUIRE_NO_ALLOC(HookDispatcher::onAudioBuffer(false, 64, 48000.0, &h.reg));
+        REQUIRE_NO_ALLOC(HookDispatcher::onAudioBuffer(true, 64, 48000.0, &h.reg));
+    }
+    h.d.resetDelivered();                       // a device change: unknown again until the next good cycle
+    REQUIRE(h.d.channelDelivered(false, 3));
+    h.feed(64);
+    REQUIRE_FALSE(h.d.channelDelivered(false, 3));
+    g_deliveredIn = kCh;                        // the user widens the input range
+    h.feed(64);
+    REQUIRE(h.d.channelDelivered(false, 3));
+    g_deliveredIn = kCh;
+}
+
+TEST_CASE("every channel of a direction null is still a null cycle and, after 500 ms, a device loss")
+{
+    Harness h; RecordingClient c; h.d.registerClient(&c);
+    h.reg.GetBuffer = &fakeGetBufferRange; g_deliveredIn = 0;   // no input delivered at all
+    h.feed(64);
+    REQUIRE(h.d.stats().nullBufferStreak == 1);
+    g_nowNs += 600'000'000; h.feed(64);
+    REQUIRE(h.events == std::vector<Reason> { Reason::DeviceLost });
+    REQUIRE(c.prePos.empty());
+    g_deliveredIn = kCh;
 }
 
 // REAPER 7.83 never fills audio_hook_register_t::input_nch/output_nch (F0.2: 0 in 504/504 cycles while

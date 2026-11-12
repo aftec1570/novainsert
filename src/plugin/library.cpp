@@ -57,6 +57,7 @@ void readPair(const juce::var& o, const char* k, int* dst, bool stereo)
 }
 std::string str(const juce::var& o, const char* k) { return o.getProperty(k, "").toString().toStdString(); }
 int skinOf(const juce::var& o) { const int v = static_cast<int>(o.getProperty("skin", 0)); return v >= 0 && v <= 2 ? v : 0; }
+int rangedInt(const juce::var& o, const char* key, int hi) { const int v = static_cast<int>(o.getProperty(key, 0)); return v >= 0 && v <= hi ? v : 0; }
 float flt(const juce::var& o, const char* k, float d) { return static_cast<float>(static_cast<double>(o.getProperty(k, d))); }
 void readFloatPair(const juce::var& o, const char* k, float dst[2])
 {
@@ -253,6 +254,8 @@ DeviceLibrary::LoadStatus DeviceLibrary::load()
         settings_.measureOnOpen = static_cast<bool>(s.getProperty("measureOnOpen", true));
         settings_.skin = skinOf(s);
         settings_.reverseWheel = static_cast<bool>(s.getProperty("reverseWheel", false));
+        settings_.meterView = rangedInt(s, "meterView", 3);
+        settings_.meterUnit = rangedInt(s, "meterUnit", 1);
         settings_.allowAnyDriver = static_cast<bool>(s.getProperty("allowAnyDriver", false));
     }
     juce::var c; std::string cerr;
@@ -327,6 +330,8 @@ void DeviceLibrary::reloadSettings()
     settings_.measureOnOpen = static_cast<bool>(s.getProperty("measureOnOpen", true));
     settings_.skin = skinOf(s);
     settings_.reverseWheel = static_cast<bool>(s.getProperty("reverseWheel", false));
+    settings_.meterView = rangedInt(s, "meterView", 3);
+    settings_.meterUnit = rangedInt(s, "meterUnit", 1);
 }
 
 bool DeviceLibrary::writeSetting(const char* key, int value, bool asBool, const std::string& what)
@@ -355,6 +360,22 @@ bool DeviceLibrary::setReverseWheel(bool on)
 {
     if (!writeSetting("reverseWheel", on ? 1 : 0, true, "mouse wheel direction")) return false;
     settings_.reverseWheel = on;
+    return true;
+}
+
+bool DeviceLibrary::setMeterView(int view)
+{
+    if (view < 0 || view > 3) view = 0;
+    if (!writeSetting("meterView", view, false, "meter view")) return false;
+    settings_.meterView = view;
+    return true;
+}
+
+bool DeviceLibrary::setMeterUnit(int unit)
+{
+    if (unit < 0 || unit > 1) unit = 0;
+    if (!writeSetting("meterUnit", unit, false, "meter unit")) return false;
+    settings_.meterUnit = unit;
     return true;
 }
 

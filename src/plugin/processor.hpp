@@ -85,6 +85,10 @@ public:
     void pollLibrary();                                       // ≤ 1 Hz from the editor: devices.json re-read, host channel names
     void setMeasureOnOpen (bool on);                          // SETUP: global (settings.json), read by every instance on project open
     void setSkin (int skin);                                  // SETUP: global GUI skin (settings.json), every open editor follows
+    void setMeterView (int view);                             // meter rocker VU/TUBE/LED/TWIN: global (settings.json), kept across restarts
+    void setMeterUnit (int unit);                             // meter unit dBu/dBFS: global (settings.json), kept across restarts
+    int meterView() const;                                    // stored choice, 0 (VU) without a library
+    int meterUnit() const;                                    // stored choice, 0 (dBu) without a library
     void setReverseWheel (bool on);                           // SETUP: global trim-knob wheel direction (settings.json)
 
 private:
@@ -177,6 +181,9 @@ private:
     const char* pendingOrigin_ = "MEASURED";             // physLoop origin the reporter's host call applies
     ni::host::Pair pair_ {};           // the record's whole pair (claimed as a unit); effectivePair() is what the loop runs on
     ni::host::Pair effectivePair() const noexcept;
+    std::string undeliveredChannel() const;   // first loop channel REAPER does not deliver ("input 25"), empty = all delivered
+    static constexpr bool hostBlocked (ni::engine::State s) noexcept { using S = ni::engine::State; return s == S::Unavailable || s == S::UnsupportedHost || s == S::UnsupportedSampleRate; }
+    std::string missingChannel_;       // ChannelNotDelivered: "input 25" / "output 3" (1-based), empty = every loop channel delivered
     ni::engine::SideSel sendSide() const noexcept; ni::engine::SideSel returnSide() const noexcept;
     int pairLoopExtra_ = 0;   // device record s3LoopExtra: provisional loop until the Measurer locks (diagnostics PROVISIONAL)
     uint32_t generation_ = 0;
@@ -227,6 +234,7 @@ private:
     struct EngineCalPort;
     std::unique_ptr<EngineCalPort> calPort_;
     std::unique_ptr<ni::plugin::CalController> cal_;
+    std::atomic<bool> driverBypassRt_ { false };  // processBlock: unsupported driver -> pass the track through dry (user 2026-11-12)
     std::atomic<bool> calRt_ { false };           // processBlock: the CAL tone may be armed (cut it on a record start)
     float sendOff_[2] { 0.0f, 0.0f }, retOff_[2] { 0.0f, 0.0f };   // per-channel trim offsets of this instance
     float linkPrevSend_ = 0.0f, linkPrevRet_ = 0.0f;               // LINK: trims last seen (P7)

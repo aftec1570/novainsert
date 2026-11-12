@@ -586,6 +586,35 @@ TEST_CASE("settings_reverse_wheel_defaults_off_persists_and_is_shared")
     REQUIRE_FALSE(c.setReverseWheel(true));    // a corrupt file is never overwritten
 }
 
+TEST_CASE("settings_meter_view_and_unit_persist_and_clamp")
+{
+    // Forum report 2026-11-12: the meter rocker came back as VU after a restart; view and unit are now global settings
+    const auto d = tempDir("settings_meter");
+    DeviceLibrary a(d), b(d);
+    a.load(); b.load();
+    REQUIRE(a.settings().meterView == 0);       // absent file → VU, dBu
+    REQUIRE(a.settings().meterUnit == 0);
+    REQUIRE(a.setMeterView(2));                 // LED
+    REQUIRE(a.setMeterUnit(1));                 // dBFS
+    REQUIRE(a.setReverseWheel(true));           // other keys kept
+    b.reloadSettings();
+    REQUIRE(b.settings().meterView == 2);
+    REQUIRE(b.settings().meterUnit == 1);
+    DeviceLibrary c(d);
+    c.load();                                   // a new process (REAPER restart) reads the same choice
+    REQUIRE(c.settings().meterView == 2);
+    REQUIRE(c.settings().meterUnit == 1);
+    REQUIRE(c.settings().reverseWheel);
+    REQUIRE(c.setMeterView(7));                 // out of range stores VU
+    REQUIRE(c.settings().meterView == 0);
+    writeFile(d / "settings.json", "{ \"meterView\": 9, \"meterUnit\": -1 }");
+    c.reloadSettings();                         // hand-edited nonsense reads as the defaults
+    REQUIRE(c.settings().meterView == 0);
+    REQUIRE(c.settings().meterUnit == 0);
+    writeFile(d / "settings.json", "{ broken");
+    REQUIRE_FALSE(c.setMeterView(1));           // a corrupt file is never overwritten
+}
+
 TEST_CASE("settings_allow_any_driver_defaults_off_and_parses")
 {
     const auto d = tempDir("settings_anydriver");

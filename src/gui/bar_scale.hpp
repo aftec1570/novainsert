@@ -48,7 +48,7 @@ struct BarFall
 
 // Meter view rocker (user 2026-11-06: "All 3 looks cool, make all 3 of them selectable"): VU faces or one of three bar looks —
 // TUBE (backlit cream face, 3D glass light-pipes), LED (smoked glass, domed LED segments), TWIN (two VU-shaped windows).
-// The per-process preference is stored as the rocker index; 1 was BARS before and stays bars (TUBE).
+// The preference (settings.json "meterView") is stored as the rocker index; 1 was BARS before and stays bars (TUBE).
 enum class MeterView : int { Vu = 0, Tube = 1, Led = 2, Twin = 3 };
 constexpr int kMeterViewCount = 4;
 inline MeterView meterViewFromStored(int v) noexcept { return v >= 0 && v < kMeterViewCount ? static_cast<MeterView>(v) : MeterView::Vu; }

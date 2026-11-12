@@ -58,7 +58,9 @@ public:
         int lastNullRun = 0;                                    // length in cycles of the last finished null run
         int inputChannels = 0;                                  // reg_.input_nch as last seen by the hook
         int outputChannels = 0;                                 // reg_.output_nch as last seen by the hook
-        int firstNullChannel = -1;                              // channel whose GetBuffer was null in the last pre cycle, -1 = none
+        int firstNullChannel = -1;                              // first input whose GetBuffer was null in the last pre cycle, -1 = none
+        int nullInputs = 0;                                     // inputs with a null buffer in the last pre cycle
+        int nullOutputs = 0;                                    // outputs with a null buffer in the last post cycle
         uint64_t dropouts = 0;
         double lastSpanUs = 0.0;
     };
@@ -66,6 +68,11 @@ public:
     // Message thread: the hook's verdict, or a null run (>= kNullCyclesToLost cycles) older than kLostMinNs whose callbacks
     // stopped, so the hook never reached the mark itself (S6 review I2). Recovery: the next good cycle ends the run.
     bool deviceLostNow() const noexcept;
+    // Message thread: did the last good cycle hand REAPER's buffer for this hardware channel? REAPER can report more
+    // channels than it delivers (inputs outside the device's enabled range return null; forum report 2026-11-12, Yamaha
+    // Steinberg FW: 40 inputs, null from 24 on). True while unknown (no good cycle yet) and for channels past kMaxChannels.
+    bool channelDelivered(bool output, int ch) const noexcept;
+    void resetDelivered() noexcept;   // message thread, device change: unknown again until the next good cycle
     void setExpectedBlock(int B);   // device BSIZE (DeviceKey.bufferSize): drives BufferChange reporting only
     // Host-side channel counts (GetNumAudioInputs/Outputs, message thread). REAPER 7.83 leaves the register's
     // input_nch/output_nch at 0 (F0.2), so these drive the cycle whenever the register says 0.
@@ -106,6 +113,11 @@ private:
     std::atomic<int> inputCh_ { 0 };                            // effective counts of the last pre cycle
     std::atomic<int> outputCh_ { 0 };
     std::atomic<int> firstNullCh_ { -1 };
+    std::atomic<int> nullIn_ { 0 };
+    std::atomic<int> nullOut_ { 0 };
+    // delivered-channel bitmaps of the last good pre (inputs) / post (outputs) cycle; [dir][word], dir 0 = in, 1 = out
+    std::atomic<uint64_t> delivered_[2][kMaxChannels / 64] {};
+    std::atomic<bool> deliveredSeen_[2] { false, false };
     std::atomic<uint64_t> dropouts_ { 0 };
     std::atomic<double> lastSpanUs_ { 0.0 };
 

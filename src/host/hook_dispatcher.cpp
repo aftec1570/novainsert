@@ -72,6 +72,8 @@ HookDispatcher::Stats HookDispatcher::stats() const noexcept
     s.inputChannels = inputCh_.load(std::memory_order_relaxed);
     s.outputChannels = outputCh_.load(std::memory_order_relaxed);
     s.firstNullChannel = firstNullCh_.load(std::memory_order_relaxed);
+    s.nullInputs = nullIn_.load(std::memory_order_relaxed);
+    s.nullOutputs = nullOut_.load(std::memory_order_relaxed);
     s.dropouts = dropouts_.load(std::memory_order_relaxed);
     s.lastSpanUs = lastSpanUs_.load(std::memory_order_relaxed);
     return s;
@@ -85,6 +87,18 @@ bool HookDispatcher::deviceLostNow() const noexcept
     const uint64_t since = nullSinceNs_.load(std::memory_order_relaxed);
     const uint64_t now = clock_();
     return since != 0 && now > since && now - since >= kLostMinNs;
+}
+
+bool HookDispatcher::channelDelivered(bool output, int ch) const noexcept
+{
+    const int d = output ? 1 : 0;
+    if (ch < 0 || ch >= kMaxChannels || !deliveredSeen_[d].load(std::memory_order_acquire)) return true;
+    return (delivered_[d][ch / 64].load(std::memory_order_relaxed) >> (ch % 64)) & 1u;
+}
+
+void HookDispatcher::resetDelivered() noexcept
+{
+    for (auto& s : deliveredSeen_) s.store(false, std::memory_order_release);
 }
 
 void HookDispatcher::setExpectedBlock(int B) { expectedBlock_.store(B, std::memory_order_relaxed); }
@@ -132,20 +146,34 @@ void HookDispatcher::cycle(bool isPost, int len, double srate, audio_hook_regist
     const int nOut = reg->output_nch > 0 ? reg->output_nch : hostOutputs_.load(std::memory_order_relaxed);
     const int nch = isPost ? nOut : nIn;
     const int n = nch < 0 ? 0 : (nch > kMaxChannels ? kMaxChannels : nch);
-    // A null cycle = REAPER handed us no usable buffers. A direction with zero channels (output-only or
-    // input-only device) is a running device, not a loss: callbacks are delivered with n == 0 for it.
+    // A null cycle = REAPER handed us no usable buffers at all. A direction with zero channels (output-only or
+    // input-only device) is a running device, not a loss: callbacks are delivered with n == 0 for it. Single null
+    // channels are not a loss either: REAPER reports channels it does not deliver (inputs outside the enabled range,
+    // forum report 2026-11-12); they reach the clients as nullptr (Instance reads silence / skips them) and the
+    // instance whose own channel is missing says so (channelDelivered).
     bool null = reg->GetBuffer == nullptr || len <= 0 || (nIn <= 0 && nOut <= 0);
-    int firstNull = -1;
+    int firstNull = -1, nullCount = 0;
+    uint64_t mask[kMaxChannels / 64] {};
     for (int i = 0; i < n && !null; ++i)
     {
         bufs_[i] = reg->GetBuffer(isPost, i);
-        if (bufs_[i] == nullptr) { null = true; firstNull = i; }
+        if (bufs_[i] == nullptr) { ++nullCount; if (firstNull < 0) firstNull = i; }
+        else mask[i / 64] |= uint64_t { 1 } << (i % 64);
     }
+    if (!null && n > 0 && nullCount == n) null = true;   // every channel of this direction null: no usable buffers
     if (!isPost)
     {
         inputCh_.store(nIn, std::memory_order_relaxed);
         outputCh_.store(nOut, std::memory_order_relaxed);
         firstNullCh_.store(firstNull, std::memory_order_relaxed);
+        nullIn_.store(nullCount, std::memory_order_relaxed);
+    }
+    else nullOut_.store(nullCount, std::memory_order_relaxed);
+    if (!null)
+    {
+        const int d = isPost ? 1 : 0;
+        for (int w = 0; w < kMaxChannels / 64; ++w) delivered_[d][w].store(mask[w], std::memory_order_relaxed);
+        deliveredSeen_[d].store(true, std::memory_order_release);
     }
 
     if (!isPost)

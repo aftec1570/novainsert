@@ -4,7 +4,7 @@
 
 namespace ni::engine
 {
-inline constexpr std::string_view kVersion = "1.2.0";
+inline constexpr std::string_view kVersion = "1.2.1";
 // Calibration algorithm version: part of CalibKey (F1 §4). Bump whenever probe/correlator/lock semantics change.
 inline constexpr int kCalibAlgorithmVersion = 1;
 } // namespace ni::engine

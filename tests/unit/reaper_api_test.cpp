@@ -166,6 +166,30 @@ TEST_CASE("driverVerdict: empty mode passes as Unknown", "[reaper_api]")  // Rev
     REQUIRE(ni::host::driverVerdict("   ") == ni::host::DriverVerdict::Unknown);
 }
 
+TEST_CASE("deviceDriverVerdict: generic ASIO wrappers are unsupported in any field (Windows rule)", "[reaper_api]")   // user 2026-11-12
+{
+    using V = ni::host::DriverVerdict;
+    using ni::host::DeviceKey;
+    const std::string ok = ni::host::platform::kSupportedDriver;
+    DeviceKey k; k.mode = ok; k.identIn = "Babyface Pro"; k.identOut = "Babyface Pro";
+    REQUIRE(ni::host::deviceDriverVerdict(k, true) == V::Supported);
+    for (const char* w : { "ASIO4ALL v2", "asio4all", "FlexASIO", "flexasio x64" })
+    {
+        DeviceKey m = k; m.identIn = w;    REQUIRE(ni::host::deviceDriverVerdict(m, true) == V::Unsupported);
+        m = k; m.identOut = w;             REQUIRE(ni::host::deviceDriverVerdict(m, true) == V::Unsupported);
+        m = k; m.mode = ok + " " + w;      REQUIRE(ni::host::deviceDriverVerdict(m, true) == V::Unsupported);
+        m = k; m.mode = ""; m.identIn = w; REQUIRE(ni::host::deviceDriverVerdict(m, true) == V::Unsupported);   // empty MODE does not let it pass
+        m = k; m.identIn = w;              REQUIRE(ni::host::deviceDriverVerdict(m, false) == V::Supported);    // rule off: MODE alone decides
+    }
+    DeviceKey other = k; other.mode = "WASAPI";
+    REQUIRE(ni::host::deviceDriverVerdict(other, true) == V::Unsupported);
+    DeviceKey wrapped = k; wrapped.identIn = "ASIO4ALL v2";   // the default follows the build: rejected only on Windows
+    REQUIRE(ni::host::deviceDriverVerdict(wrapped) == (ni::host::platform::kWindowsDriverRules ? V::Unsupported : V::Supported));
+    REQUIRE(ni::host::genericAsioWrapper("ASIO4ALL v2") == "ASIO4ALL");
+    REQUIRE(ni::host::genericAsioWrapper("FlexASIO") == "FlexASIO");
+    REQUIRE(ni::host::genericAsioWrapper("ASIO Fireface USB").empty());
+}
+
 TEST_CASE("readDeviceKey fills mode and default flags per table", "[reaper_api]")
 {
     ReaperApi a; a.GetAudioDeviceInfo = &fakeGetAudioDeviceInfo;

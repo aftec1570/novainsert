@@ -55,3 +55,10 @@ TEST_CASE("DriverUnsupported is appended after UserRequest and blocks measuring"
     REQUIRE(static_cast<int>(Reason::DriverUnsupported) == static_cast<int>(Reason::UserRequest) + 1);
     REQUIRE_FALSE(ni::engine::measureRequestAllowed(State::Unavailable, Reason::DriverUnsupported));
 }
+
+TEST_CASE("ChannelNotDelivered is appended after DriverUnsupported and blocks measuring", "[types]")
+{
+    using ni::engine::Reason; using ni::engine::State;
+    REQUIRE(static_cast<int>(Reason::ChannelNotDelivered) == static_cast<int>(Reason::DriverUnsupported) + 1);
+    REQUIRE_FALSE(ni::engine::measureRequestAllowed(State::Unavailable, Reason::ChannelNotDelivered));
+}

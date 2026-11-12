@@ -168,3 +168,22 @@ TEST_CASE("cancel of a running forceSerial request lifts the serial block")
     f.advance(50);
     REQUIRE(f.started.size() == 2);
 }
+
+// Review 2026-11-12: a measurement cancelled without a result (the instance went Unavailable, or a new trigger voided it) left
+// its running entry behind and the next request for that instance never started. The processor now calls cancel(); this is
+// the contract it relies on.
+TEST_CASE("a running request that never finishes blocks the instance until cancel releases it")
+{
+    Fx f;
+    f.s.request(MeasureRequest { 1, 1, Reason::ProjectLoad, false });
+    f.advance(600);
+    REQUIRE(f.started.size() == 1);                   // running, and the measurer is cancelled without a result
+    f.s.request(MeasureRequest { 1, 2, Reason::IoChange, false });
+    f.advance(2000);
+    REQUIRE(f.started.size() == 1);                   // the leaked entry blocks the new generation
+    f.s.cancel(1);
+    f.s.request(MeasureRequest { 1, 3, Reason::IoChange, false });
+    f.advance(600);
+    REQUIRE(f.started.size() == 2);
+    REQUIRE(f.started[1].generation == 3);
+}

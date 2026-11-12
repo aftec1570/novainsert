@@ -203,7 +203,7 @@ The lamp in each meter window and the PEAK lamp light when a sample reaches −0
 
 ![The TUBE view](img/bars.png)
 
-The rocker in the top bar has four positions: VU shows the two VU faces, TUBE, LED and TWIN show level bars in three different looks. The choice is remembered while REAPER runs and is shared by every NovaInsert window; it is not saved in the project.
+The rocker in the top bar has four positions: VU shows the two VU faces, TUBE, LED and TWIN show level bars in three different looks. The choice, and the dBu | dBFS unit next to it, is one setting for all NovaInsert windows, stored in `settings.json`: it is kept when REAPER restarts, but it is not saved in the project.
 
 - **TUBE.** One backlit cream face with SEND on top and RETURN below. Each channel is a glass tube that lights from green through yellow and orange to red.
 - **LED.** The same layout on a dark smoked-glass face. Each channel is a row of 60 LEDs, one per dB.
@@ -361,7 +361,7 @@ These appear in REAPER's parameter list, for automation, modulation and paramete
 |---|---|
 | `…/REAPER/NovaInsert/devices.json` | the device presets, chapter 4 |
 | `…/REAPER/NovaInsert/calibrations.json` | measured loops, one per interface, channels, buffer size, routing and mode; written after every lock |
-| `…/REAPER/NovaInsert/settings.json` | global settings; SETUP writes "measureOnOpen", "skin" (0 Dark, 1 Ivory, 2 Silver) and "reverseWheel" here |
+| `…/REAPER/NovaInsert/settings.json` | global settings; SETUP writes "measureOnOpen", "skin" (0 Dark, 1 Ivory, 2 Silver) and "reverseWheel" here, the meter rockers "meterView" (0 VU, 1 TUBE, 2 LED, 3 TWIN) and "meterUnit" (0 dBu, 1 dBFS) |
 | the REAPER project | the instance's full configuration plus a snapshot of its device record and calibration |
 
 The snapshot means a later edit of the library cannot change how an old project sounds. When a project's snapshot differs from the library, the editor says so ("The library record differs from this project's snapshot (kept)") and keeps the project's values. Back up the two JSON files with your templates; nothing else is written anywhere.
@@ -384,6 +384,7 @@ The snapshot means a later edit of the library cannot change how an old project 
 | Measurement paused while recording | a measurement was due during recording | it resumes when recording stops |
 | Anticipative FX processing is on for this track | you re-enabled it | press RE-APPLY ANTICIPATIVE FX |
 | Audio device lost | REAPER lost the interface | reconnect; the instance re-measures when it returns |
+| REAPER delivers no audio on this preset's channel… | the preset uses an input or output REAPER reports but does not pass on (outside the enabled input/output range, or a channel the driver lists but does not serve); the warning line names it, e.g. "Not delivered by REAPER: input 25" | enable that channel in Preferences > Audio > Device, or pick channels that are delivered; the instance measures as soon as it is |
 | Open check failed: <reason> — saved latency in use | the measurement on project open did not lock; the latency saved with the project is running | fix the cause named after the colon, then press RE-CALIBRATION |
 | Unvalidated host version <v> | REAPER is not one of the validated versions (7.83, 7.85) | informational; everything runs |
 | Device library: … | the JSON file is missing, unreadable, read-only or newer than this version | fix the file; nothing was overwritten |

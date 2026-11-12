@@ -28,7 +28,10 @@ enum class Reason : uint8_t { None = 0,
     // the user's RE-CALIBRATION (user 2026-11-06); appended so the stored failReason values keep their numbers
     UserRequest,
     // REAPER runs on a driver family this build does not support (1.1.0 port: CoreAudio / ASIO / ALSA); appended likewise
-    DriverUnsupported };
+    DriverUnsupported,
+    // REAPER reports a channel of this instance's loop but hands no buffer for it (outside the device's enabled input/output
+    // range; forum report 2026-11-12); appended likewise
+    ChannelNotDelivered };
 
 // Side of a STEREO direction (mono/stereo routing design 2026-11-05): the whole pair, or one side of a stereo unit used as a
 // mono loop. A MONO direction ignores its selector.

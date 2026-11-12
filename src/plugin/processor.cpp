@@ -19,6 +19,14 @@ using namespace Steinberg;
 
 DEF_CLASS_IID (IReaperHostApplication)
 
+// Windows build only (user 2026-11-12): ASIO4ALL / FlexASIO are labelled as such and an unsupported driver bypasses the
+// instance. Same value as ni::host::platform::kWindowsDriverRules, kept local so this file does not pull in <windows.h>.
+#if defined(_WIN32)
+static constexpr bool kWindowsDriverRules = true;
+#else
+static constexpr bool kWindowsDriverRules = false;
+#endif
+
 using ni::engine::Reason;
 using ni::engine::State;
 using ni::plugin::Param;
@@ -230,7 +238,8 @@ void NovaInsertProcessor::onCoordinatorEvent (const ni::host::Coordinator::Event
     switch (e.kind)
     {
         case Kind::Host:
-            if (e.reason == Reason::DeviceLost) setState (State::Unavailable, Reason::DeviceLost);
+            // an unsupported driver stays reported as such: a wrapper driver's null buffers must not turn it into "device lost"
+            if (e.reason == Reason::DeviceLost) { if (lastReason_ != Reason::DriverUnsupported) setState (State::Unavailable, Reason::DeviceLost); }
             else if (e.reason == Reason::DeviceReturned) evaluateHostState (Reason::DeviceReturned);
             else if (e.reason == Reason::BufferChange)
             {
@@ -257,6 +266,7 @@ void NovaInsertProcessor::onCoordinatorEvent (const ni::host::Coordinator::Event
             break;
         case Kind::MeasureStart:
             if (e.generation != generation_) break;   // a request this instance has since withdrawn or superseded
+            if (hostBlocked (state())) { coord_->scheduler().cancel (instNo_); break; }   // never probe a blocked host; free the slot
             ni::host::DiagLog::get().text ("MEAS_START", instNo_, "gen=%u|reason=%d", e.generation, static_cast<int> (e.reason));
             measureGen_ = e.generation;
             startPending_ = true;   // serviceMeasurer starts it once the loop is active and the transport is not recording
@@ -270,7 +280,9 @@ void NovaInsertProcessor::requestMeasure (Reason r)
     if (! apiOk_ || ! pairOwned_) return;
     const auto s = state();
     if (! ni::engine::measureRequestAllowed (s, r)) return;   // Failed only for the user's RE-CALIBRATION
-    if (s == State::Measuring || startPending_) cancelMeasure (r);   // a re-evaluation trigger voids the running or granted measurement (F1 §13, S7 review I3)
+    // a re-evaluation trigger voids the running or granted measurement (F1 §13, S7 review I3) and its scheduler slot: the
+    // cancelled measurer never reports, so the running entry would block the new request forever (review 2026-11-12)
+    if (s == State::Measuring || startPending_) { cancelMeasure (r); coord_->scheduler().cancel (instNo_); }
     if (pdc_) { pdc_->cancel(); pendingPhys_ = -1; syncPdcMute(); }   // a newer request supersedes a pending/awaited PDC transition
     openFallbackOn_ = false;   // a new latency check is under way: the warning returns only if it fails again with a kept snapshot
     generation_ = coord_->nextGeneration();
@@ -324,7 +336,8 @@ void NovaInsertProcessor::applyDeviceParameter()
         pairOwned_ = true;
         ni::host::DiagLog::get().text ("PAIR", instNo_, "owner|device=%d|id=%s|out=%d/%d|in=%d/%d|sendStereo=%d|retStereo=%d|ver=%d|vu=%.1f|from=%s", dev, rec->id.c_str(), pair_.out[0], pair_.out[1],
                                        pair_.in[0], pair_.in[1], rec->sendStereo ? 1 : 0, rec->returnStereo ? 1 : 0, rec->version, static_cast<double> (rec->vuRefDbfs), restore_.usesProject (claimedDevice_) ? "project" : "library");
-        if (state() == State::Unavailable) evaluateHostState();
+        // the host checks run before the first request, so a preset on an undelivered channel never probes silence (review 2026-11-12)
+        if (state() == State::Unavailable || ! undeliveredChannel().empty()) evaluateHostState();
         // a restore measures now; a user selection measures on the tick that applies the preset's defaults (its mode is part of
         // the key: requesting first and switching mode after would cancel and requeue, and an Effect preset chosen from Insert
         // would briefly hold an Insert probe request — final review M2)
@@ -400,9 +413,9 @@ void NovaInsertProcessor::pollHost()
     {
         const auto st = coord_->hooks().stats();
         char line[192];
-        std::snprintf (line, sizeof (line), "len=%d|in=%d|out=%d|nullstreak=%d|lastnullrun=%d|firstnull=%d|dropouts=%llu",
+        std::snprintf (line, sizeof (line), "len=%d|in=%d|out=%d|nullstreak=%d|lastnullrun=%d|firstnull=%d|dropouts=%llu|nullin=%d|nullout=%d",
                        st.lastLen, st.inputChannels, st.outputChannels, st.nullBufferStreak, st.lastNullRun, st.firstNullChannel,
-                       static_cast<unsigned long long> (st.dropouts));
+                       static_cast<unsigned long long> (st.dropouts), st.nullInputs, st.nullOutputs);
         if (lastHookStat_ != line)
         {
             lastHookStat_ = line;
@@ -427,12 +440,17 @@ void NovaInsertProcessor::evaluateHostState (Reason trigger)
     if (! wasOpen && everOpen_) pending = Reason::DeviceReopen;
     else if (wasOpen && lastBufferSize_ > 0 && key.bufferSize != lastBufferSize_) pending = Reason::BufferChange;
     else if (wasOpen && ! lastIdent_.empty() && lastIdent_ != key.identIn + "|" + key.identOut) pending = Reason::IoChange;
+    if (pending == Reason::DeviceReopen || pending == Reason::IoChange) coord_->hooks().resetDelivered();   // the old device's map no longer applies
     everOpen_ = true; lastBufferSize_ = key.bufferSize; lastIdent_ = key.identIn + "|" + key.identOut;
     identIn_ = key.identIn; identOut_ = key.identOut;
-    if (key.isDefault) { setState (State::Unavailable, Reason::DefaultDevice); return; }
+    // the driver gate runs before the default-device and hook checks: an unsupported driver (WASAPI, ASIO4ALL, FlexASIO, ...)
+    // must say so, never "Audio device lost" (user bug report 2026-11-12, REAPER 7.85 / Windows 10)
     driverMode_ = key.mode;
+    if (kWindowsDriverRules)
+      for (const auto* s : { &key.mode, &key.identIn, &key.identOut })
+        if (const auto w = ni::host::genericAsioWrapper (*s); ! w.empty()) { driverMode_ = key.mode.empty() ? w : key.mode + " (" + w + ")"; break; }
     driverOverride_ = false;
-    switch (ni::host::driverVerdict (key.mode))
+    switch (ni::host::deviceDriverVerdict (key))
     {
         case ni::host::DriverVerdict::Supported: lastUnsupportedMode_.clear(); break;
         case ni::host::DriverVerdict::Unknown:
@@ -443,17 +461,18 @@ void NovaInsertProcessor::evaluateHostState (Reason trigger)
             if (library_ && library_->settings().allowAnyDriver)
             {
                 driverOverride_ = true;
-                if (! driverOverrideLogged_) { driverOverrideLogged_ = true; ni::host::DiagLog::get().text ("DRIVER_OVERRIDE", instNo_, "%s", key.mode.c_str()); }
+                if (! driverOverrideLogged_) { driverOverrideLogged_ = true; ni::host::DiagLog::get().text ("DRIVER_OVERRIDE", instNo_, "%s", driverMode_.c_str()); }
                 break;
             }
-            if (lastUnsupportedMode_ != key.mode)
+            if (lastUnsupportedMode_ != driverMode_)
             {
-                lastUnsupportedMode_ = key.mode;
-                ni::host::DiagLog::get().text ("DRIVER_UNSUPPORTED", instNo_, "%s", key.mode.c_str());
+                lastUnsupportedMode_ = driverMode_;
+                ni::host::DiagLog::get().text ("DRIVER_UNSUPPORTED", instNo_, "%s", driverMode_.c_str());
             }
             setState (State::Unavailable, Reason::DriverUnsupported);
             return;
     }
+    if (key.isDefault) { setState (State::Unavailable, Reason::DefaultDevice); return; }
     const double prepared = preparedSampleRate_.load (std::memory_order_acquire);
     const int sr = key.sampleRate > 0 ? key.sampleRate : static_cast<int> (prepared);
     if (sr != ni::engine::kSampleRate || (prepared > 0.0 && static_cast<int> (prepared) != ni::engine::kSampleRate))
@@ -466,17 +485,45 @@ void NovaInsertProcessor::evaluateHostState (Reason trigger)
     if (state() == State::Unavailable && lastReason_ == Reason::DeviceLost && trigger == Reason::None) trigger = Reason::DeviceReturned;
     if (antViolation_) { setState (State::UnsupportedHost, Reason::AnticipativeOn); return; }
     if (conflicted_) { setState (State::Unavailable, Reason::PairConflict); return; }
+    // REAPER can report channels it does not deliver (inputs outside the device's enabled range): an instance whose own loop
+    // channel is one of them says so instead of measuring silence (forum report 2026-11-12, Yamaha Steinberg FW ASIO).
+    {
+        const std::string missing = undeliveredChannel();
+        if (missing != missingChannel_)
+        {
+            missingChannel_ = missing;
+            ni::host::DiagLog::get().text ("CHANNEL_NOT_DELIVERED", instNo_, "%s", missing.empty() ? "none" : missing.c_str());
+        }
+        if (! missing.empty()) { setState (State::Unavailable, Reason::ChannelNotDelivered); return; }
+        if (state() == State::Unavailable && lastReason_ == Reason::ChannelNotDelivered && trigger == Reason::None) trigger = Reason::IoChange;
+    }
     if (state() == State::UnsupportedHost || state() == State::Unavailable || state() == State::UnsupportedSampleRate)
         setState (State::Idle, Reason::None);
     // host usable again: labelled by what made it so; a recording abort waits for the record path (reason Recording)
     if (const Reason r = ni::engine::hostPollRequeue (state(), pending, trigger, requeueAfterRecord_, measureAfterDefaults_.has_value()); r != Reason::None) requestMeasure (r);
 }
 
+std::string NovaInsertProcessor::undeliveredChannel() const
+{
+    if (! pairOwned_ || ! coord_) return {};
+    const auto eff = effectivePair();
+    const auto& hk = coord_->hooks();
+    for (int c = 0; c < (eff.sendStereo ? 2 : 1); ++c)
+        if (eff.out[c] >= 0 && ! hk.channelDelivered (true, eff.out[c])) return "output " + std::to_string (eff.out[c] + 1);
+    for (int c = 0; c < (eff.retStereo ? 2 : 1); ++c)
+        if (eff.in[c] >= 0 && ! hk.channelDelivered (false, eff.in[c])) return "input " + std::to_string (eff.in[c] + 1);
+    return {};
+}
+
 void NovaInsertProcessor::setState (State s, Reason r)
 {
     if (s == state() && r == lastReason_) return;
+    // Entering a host-blocked state voids the measurement and its scheduler slot: cancelMeasure alone (releaseLoop) left the
+    // running entry behind, so a later request never started and the instance stayed Queued (review 2026-11-12).
+    if (hostBlocked (s) && ! hostBlocked (state()) && coord_) { cancelMeasure (r); coord_->scheduler().cancel (instNo_); }
     state_.store (s, std::memory_order_release);
     lastReason_ = r;
+    driverBypassRt_.store (kWindowsDriverRules && r == Reason::DriverUnsupported, std::memory_order_release);
     setReadOnly (Param::State, static_cast<int> (s));
     ni::host::DiagLog::get().text ("STATE", instNo_, "state=%d|reason=%d", static_cast<int> (s), static_cast<int> (r));
 }
@@ -908,6 +955,8 @@ void NovaInsertProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::
         inst->engine().setTrims (pSendTrim->get(), pReturnTrim->get());   // block-accurate trims (automation, render); ramps across the block
         if (inst->process (io, nch, n, pos, playing)) return;   // meters are tapped in the hook (send and return both after the trim)
     }
+    // unsupported driver (Windows build): automatic bypass, the track plays dry (the loop is released, so the reported latency is 0)
+    if (driverBypassRt_.load (std::memory_order_acquire)) return;
     float* io[2] { buffer.getNumChannels() > 0 ? buffer.getWritePointer (0) : nullptr, nch > 1 ? buffer.getWritePointer (1) : nullptr };
     ni::plugin::applyFallback (pMode->getIndex() == 1 ? ni::engine::Mode::Effect : ni::engine::Mode::Insert, io, nch, buffer.getNumSamples());
 }
@@ -934,6 +983,7 @@ ni::gui::ViewInputs NovaInsertProcessor::viewInputs() const
     in.reason = lastReason_;
     in.driverMode = driverMode_;
     in.driverOverride = driverOverride_;
+    in.missingChannel = missingChannel_;
     const bool active = inst_ && inst_->active();
     in.physLoop = active ? inst_->physLoop() : -1;
     in.reportedPdc = active ? getLatencySamples() : -1;
@@ -1018,6 +1068,23 @@ void NovaInsertProcessor::setSkin (int skin)
     const bool ok = library_->setSkin (skin);
     ni::host::DiagLog::get().text ("LIB", instNo_, "skin=%d|saved=%d", skin, ok ? 1 : 0);
 }
+
+void NovaInsertProcessor::setMeterView (int view)
+{
+    if (! library_) return;
+    const bool ok = library_->setMeterView (view);
+    ni::host::DiagLog::get().text ("LIB", instNo_, "meterView=%d|saved=%d", view, ok ? 1 : 0);
+}
+
+void NovaInsertProcessor::setMeterUnit (int unit)
+{
+    if (! library_) return;
+    const bool ok = library_->setMeterUnit (unit);
+    ni::host::DiagLog::get().text ("LIB", instNo_, "meterUnit=%d|saved=%d", unit, ok ? 1 : 0);
+}
+
+int NovaInsertProcessor::meterView() const { return library_ ? library_->settings().meterView : 0; }
+int NovaInsertProcessor::meterUnit() const { return library_ ? library_->settings().meterUnit : 0; }
 
 void NovaInsertProcessor::pollLibrary()
 {

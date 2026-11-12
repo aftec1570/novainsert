@@ -91,6 +91,17 @@ DeviceKey readDeviceKey(const ReaperApi& api);
 enum class DriverVerdict { Supported, Unknown, Unsupported };
 DriverVerdict driverVerdict(const std::string& mode) noexcept;
 
+// Generic ASIO wrappers (ASIO4ALL, FlexASIO) layer ASIO over the Windows WDM/WASAPI stack: REAPER reports them as ASIO, but
+// their buffers and latency are not the interface's own (user 2026-11-12: such a driver gets a warning and a bypass).
+// Case-insensitive substring match; empty when `s` names no wrapper, else the wrapper's display name.
+std::string genericAsioWrapper(const std::string& s);
+
+// The driver gate over the whole device key: driverVerdict(MODE); with `rejectWrappers` also Unsupported when MODE, IDENT_IN
+// or IDENT_OUT names a generic ASIO wrapper (REAPER may carry the driver name in either). The one-argument form applies the
+// build's rule: wrappers are rejected in the Windows build only (platform::kWindowsDriverRules).
+DriverVerdict deviceDriverVerdict(const DeviceKey& k, bool rejectWrappers);
+DriverVerdict deviceDriverVerdict(const DeviceKey& k);
+
 // IDENT_IN / IDENT_OUT values that name no concrete device (docs/port/driver-identity.md): such a key is never persisted.
 bool isDefaultDeviceName(const std::string& ident) noexcept;
 

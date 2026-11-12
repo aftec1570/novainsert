@@ -35,6 +35,13 @@ inline constexpr const char* kSupportedDriver = "ASIO";
 #else
 inline constexpr const char* kSupportedDriver = "ALSA";
 #endif
+// Windows only (user 2026-11-12): ASIO4ALL / FlexASIO count as unsupported, and an unsupported driver bypasses the instance
+// (dry pass-through) instead of the silent fallback. macOS and Linux keep the 1.2.0 behaviour.
+#if defined(_WIN32)
+inline constexpr bool kWindowsDriverRules = true;
+#else
+inline constexpr bool kWindowsDriverRules = false;
+#endif
 
 // Names the calling thread (truncated where the OS limits it: 15 bytes on Linux) and lowers its priority so it never
 // competes with audio or UI: QoS utility (macOS), THREAD_PRIORITY_BELOW_NORMAL (Windows), nice +10 (Linux, per thread).

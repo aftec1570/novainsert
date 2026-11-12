@@ -58,9 +58,9 @@ public:
     void setMeters (const Reading& send, const Reading& ret);                          // every frame: needle drives, LEDs
     void advance (double dt) { sendVu_.advance (dt); returnVu_.advance (dt); bars_.advance (dt); }
     void settleNeedles();                                                              // snapshot: needles at rest on the drives, bars at the peaks
-    void setMeterView (int view);                                                      // MeterView index: 0 VU faces, 1 TUBE, 2 LED, 3 TWIN bars; a per-process preference
+    void setMeterView (int view);                                                      // MeterView index: 0 VU faces, 1 TUBE, 2 LED, 3 TWIN bars; global, settings.json "meterView"
     int currentMeterView() const noexcept { return meterView.selected(); }
-    void setMeterUnit (int unit);                                                      // 0 = dBu, 1 = dBFS on BOTH meters (user 2026-11-05); per process
+    void setMeterUnit (int unit);                                                      // 0 = dBu, 1 = dBFS on BOTH meters (user 2026-11-05); global, settings.json "meterUnit"
     void showSetup (bool on);
     void showDevices (bool on);   // SETUP and DEVICES never show together
     bool setupVisible() const { return setup.isVisible(); }
@@ -79,7 +79,7 @@ public:
     std::function<void (int action)> onCal;                  // 1 = SEND CAL toggle, 2 = RETURN CAL, 3 = cancel
     std::function<void()> onReapply;
     std::function<void()> onRecalibrate;                     // RE-CALIBRATION under SETUP (user 2026-11-06)
-    std::function<void (int view)> onMeterView;              // the user switched the meter view (the editor remembers it per process)
+    std::function<void (int view)> onMeterView;              // the user switched the meter view (stored in settings.json, global)
     std::function<void (int unit)> onMeterUnit;              // the user switched the meter unit (same kind of preference)
 
     void paint (juce::Graphics&) override;

@@ -1,7 +1,27 @@
 # NovaInsert — version history
 
-Latest version: **1.2.0** · [Download the latest release (macOS DMG, Windows zip, Linux tar.gz)](https://github.com/aftec1570/novainsert/releases/latest) ·
+Latest version: **1.2.1** · [Download the latest release (macOS DMG, Windows zip, Linux tar.gz)](https://github.com/aftec1570/novainsert/releases/latest) ·
 [All releases](https://github.com/aftec1570/novainsert/releases) · [Bug and fix ledger](BUGS.md)
+
+## 1.2.1 — 2026-11-12
+
+Bug-fix release for the first Windows reports. Projects, presets (`devices.json`) and settings from 1.0.x, 1.1.x and 1.2.0
+load unchanged on every platform.
+
+- **Fixed: "Audio device lost" although the interface works** (all platforms; reported on Windows). When REAPER reports
+  more channels than it hands out audio for, NovaInsert no longer treats the device as lost. A preset whose own channel
+  gets no audio now says so and names the channel; enable it in Preferences > Audio > Device. ([BUGS.md #4](BUGS.md))
+- **Fixed: the meter view and unit are remembered.** VU / TUBE / LED / TWIN and dBu / dBFS are stored in `settings.json` and
+  kept when REAPER restarts. ([#5](BUGS.md))
+- **Windows: ASIO4ALL and FlexASIO are refused.** With these wrappers (or any non-ASIO driver) NovaInsert shows a warning
+  and passes the audio through dry; use the interface's own ASIO driver. ([#6](BUGS.md))
+- Validation tiers unchanged: macOS hardware-validated (UA Apollo bench); Windows real hardware (RME Babyface Pro, native
+  ASIO, cable loops); Linux functionally validated in a virtual environment, hardware timing validation pending (beta).
+
+SHA-256:
+- `NovaInsert-1.2.1-macOS-arm64.dmg`: `c8465b1f767393b794efca6e1f89f3502358e5e990b530f743174f07412c1e13`
+- `NovaInsert-1.2.1-Windows-x64.zip`: `5c987d4b21407883d084a18e957084889ad3a981552f3c00bd95329b1dc9f885`
+- `NovaInsert-1.2.1-Linux-x86_64.tar.gz`: `860b1b113aad023e9351cf9d2e124ddc3c140d25235737544a2b70e3cda2ad8a`
 
 ## 1.2.0 — 2026-11-10
 

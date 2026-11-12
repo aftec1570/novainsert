@@ -10,6 +10,9 @@ Latest version: [download](https://github.com/aftec1570/novainsert/releases/late
 | [1](https://github.com/aftec1570/novainsert/issues/1) | 2026-11-08 | Mouse wheel direction on trim knobs is reversed | Fixed | 1.0.1 |
 | [2](https://github.com/aftec1570/novainsert/issues/2) | 2026-11-08 | "Interface" in Preset Setup goes back to Apollo when saving a Custom preset | Fixed | 1.0.1 |
 | 3 | 2026-11-10 | Measuring while the transport plays fails with "no return" | Fixed | 1.1.1 |
+| 4 | 2026-11-12 | "Audio device lost" on Windows although the interface works in ReaInsert | Fixed | 1.2.1 |
+| 5 | 2026-11-12 | The meter view (VU / TUBE / LED / TWIN) comes back as VU | Fixed | 1.2.1 |
+| 6 | 2026-11-12 | ASIO4ALL and FlexASIO pass the Windows driver check although they are not supported | Fixed | 1.2.1 |
 
 ## #1 — Mouse wheel direction on trim knobs is reversed
 
@@ -36,6 +39,43 @@ Latest version: [download](https://github.com/aftec1570/novainsert/releases/late
   analog level). Nothing to choose, so nothing can revert. Presets saved with 1.0.0 load unchanged.
 - **Verified:** unit test for the interface line; in REAPER 7.85 a preset saved through PRESET SETUP keeps its typed
   levels and shows "CoreAudio BlackHole 64ch" as reported by REAPER, after SAVE and after reopening.
+
+## #4 — "Audio device lost" on Windows although the interface works in ReaInsert
+
+- **Reported:** 2026-11-12 in the REAPER forum thread (REAPER 7.85, Windows 10, Yamaha Steinberg MR816 CSX on its native
+  FireWire ASIO driver 1.7.8).
+- **Symptom:** "Select a free device first", then "Audio device lost"; the interface's channels were recognised and worked
+  in ReaInsert.
+- **Root cause:** the reporter's diagnostics showed REAPER reporting 40 inputs but handing out audio only for inputs 1–24.
+  NovaInsert treated any single channel without audio as a lost device, so after half a second it stopped running, although
+  the preset's own channels (output 17, input 19) were fine.
+- **Fix (1.2.1):** a device counts as lost only when REAPER hands out no channel at all in a direction. A preset whose own
+  channel is missing says so: "REAPER delivers no audio on this preset's channel. Enable it in Preferences > Audio > Device
+  (input/output range)", with the channel named (e.g. "Not delivered by REAPER: input 25"); it measures as soon as the
+  channel is delivered. An independent review of the fix also found that an instance could stay "Queued" after its device
+  came back while a measurement had been cancelled; that is fixed in the same release.
+- **Verified:** new unit tests reproduce the logged condition (40 reported, 24 delivered) and the stuck-queue case; full
+  unit suite on macOS (release, debug, ASan, TSan) and Windows; pluginval strictness 10 on both; live in REAPER on macOS
+  (BlackHole) and on the Windows Babyface bench (PDC, fault scenarios). The exact driver behaviour could not be reproduced
+  on the bench (REAPER's own input range shrinks the reported count instead).
+
+## #5 — The meter view (VU / TUBE / LED / TWIN) comes back as VU
+
+- **Reported:** 2026-11-12 in the REAPER forum thread (same report as #4).
+- **Root cause:** the meter view and the dBu / dBFS unit were kept only while REAPER ran, so every restart opened on VU.
+- **Fix (1.2.1):** both are stored in `settings.json` (`meterView`, `meterUnit`), one setting for every instance, kept across
+  restarts; not saved in the project.
+- **Verified:** unit test (stored, read by a new process, other settings kept, invalid values read as the defaults).
+
+## #6 — ASIO4ALL and FlexASIO pass the Windows driver check
+
+- **Reported:** 2026-11-12, found while investigating #4.
+- **Root cause:** REAPER reports these wrappers as ASIO, so the driver check accepted them although they are not supported.
+- **Fix (1.2.1, Windows only):** an ASIO device whose name contains ASIO4ALL or FlexASIO, and any non-ASIO driver, shows
+  "Audio driver not supported, NovaInsert is bypassed. Use the interface's own ASIO driver (not ASIO4ALL or FlexASIO)" and
+  passes the audio through dry. macOS and Linux are unchanged.
+- **Verified:** unit tests; live on the Windows bench with ASIO4ALL 2.22, FlexASIO 1.10b, DirectSound and the Babyface's
+  own driver as the control.
 
 ## #3 — Measuring while the transport plays fails with "no return"
 
