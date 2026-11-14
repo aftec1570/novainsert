@@ -38,7 +38,7 @@ TEST_CASE("slot_loop_exact_after_inherent_gap")
 {
     const int B = GENERATE(32, 64, 128, 256, 512, 1024, 2048);
     const int32_t physLoop = 2 * B, R = physLoop + 2 * B;
-    const int64_t P = 1000, tenSec = 10 * kSampleRate;
+    const int64_t P = 1000, tenSec = 10 * kDefaultSampleRate;
     SlotLoopEngine e; e.prepare(B); e.setRouting(kStereo);
     REQUIRE(e.setLatency(physLoop, R));
     HostSim s(B, B, P + tenSec + 8 * R + 8 * B, P + tenSec);
@@ -142,7 +142,7 @@ TEST_CASE("slot_loop_width_routing_table")
 
 TEST_CASE("slot_loop_mono_send_keeps_the_level_of_identical_channels")
 {
-    // user 2026-11-05: "make sure the sum level is the same as the original" — a mono item plays on both track channels
+    // user 2026-11-05: "make sure the sum level is the same as the original" – a mono item plays on both track channels
     const int B = 64; const int32_t physLoop = 2 * B, R = physLoop + 2 * B;
     SlotLoopEngine e; e.prepare(B); e.setRouting({ false, false, 0.0f, 0.0f }); REQUIRE(e.setLatency(physLoop, R));
     HostSim s(B, B, 40000, 20000);
@@ -273,7 +273,7 @@ TEST_CASE("slot_loop_captured_count_tracks_current_probe")
 TEST_CASE("slot_loop_cut_probe_silences_the_send_from_the_next_block")
 {
     // Record start mid-probe (plan Review Focus 3): processBlock cuts the armed probe RT-safely; the send carries silence from
-    // the next POST on (never the program — the message thread disarms later), and a probe armed after the cut plays normally.
+    // the next POST on (never the program – the message thread disarms later), and a probe armed after the cut plays normally.
     const int B = 64; const int32_t physLoop = 2 * B, R = physLoop + 2 * B;
     SlotLoopEngine e; e.prepare(B); e.setRouting(kStereo); REQUIRE(e.setLatency(physLoop, R));
     HostSim s(B, B, 60000, 40000);
@@ -613,7 +613,7 @@ TEST_CASE("slot_loop_per_channel_send_and_return_gain")
 TEST_CASE("slot_loop_trim_change_ramps_within_one_block_and_lands_exactly")
 {
     // user 2026-11-05 "make sure the trims actually work": a trim set from processBlock (setTrims, every block) reaches the
-    // audio at that block — not on the 20 ms message-thread timer — as a ramp across that one block (no zipper step), and is
+    // audio at that block – not on the 20 ms message-thread timer – as a ramp across that one block (no zipper step), and is
     // exact from the next block on, on the send and on the return; the per-channel offsets still add on top.
     const int B = 64; const int32_t physLoop = 2 * B, R = physLoop + 2 * B;
     Routing rt = kStereo; rt.returnOffsetDb[1] = 1.0f;
@@ -675,7 +675,7 @@ TEST_CASE("slot_loop_hook_meter_taps")
     const int B = 4800;
     Routing rt = kStereo; rt.sendTrimDb = -6.0f; rt.returnTrimDb = -12.0f;
     SlotLoopEngine e; e.prepare(B); e.setRouting(rt); REQUIRE(e.setLatency(2 * B, 4 * B));
-    MeterEngine sm, rm; sm.prepare(kSampleRate); rm.prepare(kSampleRate);
+    MeterEngine sm, rm; sm.prepare(kDefaultSampleRate); rm.prepare(kDefaultSampleRate);
     e.setMeters(&sm, &rm);
     std::vector<float> half(B, 0.5f), l(B), r(B);
     e.setProbe(half.data(), B, true, true);
@@ -695,7 +695,7 @@ TEST_CASE("slot_loop_return_meter_clip_is_the_converter_input_not_the_trimmed_le
     const int B = 4800;
     Routing rt = kStereo; rt.returnTrimDb = -12.0f;
     SlotLoopEngine e; e.prepare(B); e.setRouting(rt); REQUIRE(e.setLatency(2 * B, 4 * B));
-    MeterEngine sm, rm; sm.prepare(kSampleRate); rm.prepare(kSampleRate);
+    MeterEngine sm, rm; sm.prepare(kDefaultSampleRate); rm.prepare(kDefaultSampleRate);
     e.setMeters(&sm, &rm);
     std::vector<float> hot(B, 1.001f), l(B), r(B);
     float* out[2] { l.data(), r.data() };
@@ -711,7 +711,7 @@ TEST_CASE("slot_loop_rt_no_alloc_with_meters_and_looping_probe")
 {
     const int B = 64; const int32_t physLoop = 2 * B, R = physLoop + 2 * B;
     SlotLoopEngine e; e.prepare(B); e.setRouting(kStereo); REQUIRE(e.setLatency(physLoop, R));
-    MeterEngine sm, rm; sm.prepare(kSampleRate); rm.prepare(kSampleRate);
+    MeterEngine sm, rm; sm.prepare(kDefaultSampleRate); rm.prepare(kDefaultSampleRate);
     e.setMeters(&sm, &rm);
     std::vector<float> tone(4800, 0.1f);
     HostSim s(B, B, 80000, 70000);

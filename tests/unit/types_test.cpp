@@ -20,7 +20,7 @@ TEST_CASE("constants match F1 s23")
 {
     REQUIRE(kLMax == 65536);
     REQUIRE(kBMax == 2048);
-    REQUIRE(kMaxInstances == 20);
+    REQUIRE(kValidatedInstances == 20);
     REQUIRE(kMarginBlocks == 2);
 }
 

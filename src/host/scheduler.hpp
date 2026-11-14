@@ -1,5 +1,5 @@
-// Scheduler — process-wide measurement queue (F1 §11, plan Task 8). Message thread only (tick from a 50 ms timer).
-//   request(): coalesces per instance — every request restarts a 500 ms quiet window and keeps the newest generation.
+// Scheduler – process-wide measurement queue (F1 §11, plan Task 8). Message thread only (tick from a 50 ms timer).
+//   request(): coalesces per instance – every request restarts a 500 ms quiet window and keeps the newest generation.
 //   Queue order: FIFO by first request time. running ≤ maxConcurrent (0 = unlimited); a forceSerial request
 //   starts only when nothing runs and blocks every other start while it runs.
 //   Policy per (instance, generation): one attempt + one retry, then no more automatic requests for that

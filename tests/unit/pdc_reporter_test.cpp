@@ -235,7 +235,7 @@ TEST_CASE("reporter_mute_lifts_on_lock_and_on_cancel")
 
 TEST_CASE("reporter_request_carries_the_callers_reason_into_applying_latency")
 {
-    // Task 22: a project reopened with a matching calibration snapshot reports R without a probe — ApplyingLatency(StateRestore)
+    // Task 22: a project reopened with a matching calibration snapshot reports R without a probe – ApplyingLatency(StateRestore)
     std::vector<Reason> seen;
     HostTransitionObserver obs;
     PdcReporter rep ([] (int32_t) {}, obs,

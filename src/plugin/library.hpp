@@ -2,7 +2,7 @@
 // <ResourcePath>/NovaInsert/{devices,calibrations,settings}.json, "schema": 1. Writes are atomic (temp file + rename) under
 // an flock on <dir>/.lock and re-read the file first, merging by id + version, so two REAPER instances never lose a record.
 // Schema 0 (no field) is migrated and rewritten; a newer schema is used read-only and never rewritten; a read-only or corrupt
-// file warns and the plugin runs on in-memory data (audio is never blocked). Message thread / worker only — never RT.
+// file warns and the plugin runs on in-memory data (audio is never blocked). Message thread / worker only – never RT.
 #pragma once
 #include <filesystem>
 #include <optional>
@@ -92,7 +92,7 @@ struct Settings
     int meterUnit = 0;           // meter unit, global: 0 dBu / 1 dBFS; anything else reads as dBu
 };
 
-// Channel names the host reports for a record's channels ([0]/[1] = L/R; empty when unknown or mono R) — part of the key, so a
+// Channel names the host reports for a record's channels ([0]/[1] = L/R; empty when unknown or mono R) – part of the key, so a
 // renamed/remapped interface channel never reuses a calibration (F1 §4).
 struct ChannelNames { std::string send[2]; std::string ret[2]; };
 

@@ -1,4 +1,4 @@
-// NovaInsert engine core — shared value types (F1 §3 symbols, §4 CalibKey, §13 states, §15 reasons, §23 constants).
+// NovaInsert engine core – shared value types (F1 §3 symbols, §4 CalibKey, §13 states, §15 reasons, §23 constants).
 #pragma once
 #include <cstdint>
 #include <string>
@@ -7,9 +7,17 @@ namespace ni::engine
 {
 inline constexpr int32_t kLMax = 65536;        // F1 §23 Q8: max supported loop latency (samples)
 inline constexpr int32_t kBMax = 2048;         // largest mandatory hardware buffer
-inline constexpr int32_t kMaxInstances = 20;   // validated active instances
+inline constexpr int32_t kValidatedInstances = 20;   // active instances covered by the bench matrices; no runtime limit (2026-11-14)
 inline constexpr int32_t kMarginBlocks = 2;    // R = physLoop + kMarginBlocks * B (F1 §3)
-inline constexpr int32_t kSampleRate = 48000;  // the only supported rate (R-SR-1)
+inline constexpr int32_t kDefaultSampleRate = 48000;   // rate assumed until the device reports one; the click probe's sample counts
+// The supported device rates (R-SR-1, widened 2026-11-14 from 48 kHz only). Every other rate → UnsupportedSampleRate.
+inline constexpr int32_t kSupportedSampleRates[] = { 44100, 48000, 88200, 96000, 192000 };
+inline constexpr int32_t kMaxSampleRate = 192000;
+constexpr bool isSupportedSampleRate(int32_t fs) noexcept
+{
+    for (const int32_t r : kSupportedSampleRates) if (r == fs) return true;
+    return false;
+}
 inline constexpr int32_t kAlgorithmVersion = 1; // CalibKey field (F1 §4): bump when the measurement algorithm changes
 
 struct Frame  { float l, r; int32_t gen; int64_t pos; };   // send ring: pos = project input sample index
@@ -31,7 +39,9 @@ enum class Reason : uint8_t { None = 0,
     DriverUnsupported,
     // REAPER reports a channel of this instance's loop but hands no buffer for it (outside the device's enabled input/output
     // range; forum report 2026-11-12); appended likewise
-    ChannelNotDelivered };
+    ChannelNotDelivered,
+    // the device sample rate changed (rate-independence 2026-11-14): a latency in samples no longer holds, re-measure
+    SampleRateChange };
 
 // Side of a STEREO direction (mono/stereo routing design 2026-11-05): the whole pair, or one side of a stereo unit used as a
 // mono loop. A MONO direction ignores its selector.
@@ -53,7 +63,7 @@ constexpr bool measureRequestAllowed(State s, Reason r) noexcept
 }
 
 // RE-CALIBRATION is offered only after a failed calibration (user 2026-11-06): a Failed instance, or a failed open check
-// running on the saved latency (still applying, locked or stale) — never while a check runs or a measured lock holds.
+// running on the saved latency (still applying, locked or stale) – never while a check runs or a measured lock holds.
 constexpr bool recalibrationOffered(State s, bool openFallback) noexcept
 {
     return s == State::Failed || (openFallback && (s == State::Locked || s == State::ApplyingLatency || s == State::Stale));

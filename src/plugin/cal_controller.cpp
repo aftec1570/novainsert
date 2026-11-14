@@ -11,9 +11,7 @@ namespace cal = engine::cal;
 static_assert(static_cast<int>(CalStatus::ProgramOutOfRange) == kCalStatusMax);
 
 CalController::CalController(CalPort& port)
-    : port_(port), tone_(kToneSamples),
-      capL_(static_cast<size_t>(engine::kLMax + cal::kSettleSamples + cal::kWindowSamples)),
-      capR_(capL_.size())
+    : port_(port), tone_(cal::kMaxToneLoopSamples), capL_(static_cast<size_t>(kCaptureCap)), capR_(capL_.size())
 {
 }
 
@@ -49,11 +47,14 @@ CalStatus CalController::pressReturn(const CalContext& c)
 {
     if (active()) return status_;
     if (const auto r = refusal(c)) return status_ = *r;
-    cal::makeTone(tone_.data(), kToneSamples, c.vuRefDbfs);
-    need_ = std::clamp(port_.physLoop(), 0, static_cast<int>(engine::kLMax)) + cal::kSettleSamples + cal::kWindowSamples;
+    fs_ = engine::isSupportedSampleRate(c.sampleRate) ? c.sampleRate : engine::kDefaultSampleRate;
+    const int toneN = cal::toneLoopSamples(fs_);
+    window_ = cal::windowSamples(fs_, engine::kLMax, kCaptureCap);
+    cal::makeTone(tone_.data(), toneN, c.vuRefDbfs, fs_);
+    need_ = std::clamp(port_.physLoop(), 0, static_cast<int>(engine::kLMax)) + cal::settleSamples(fs_) + window_;
     result_.reset();
     startedAt_.reset();
-    port_.startTone(tone_.data(), kToneSamples);
+    port_.startTone(tone_.data(), toneN);
     return status_ = CalStatus::ReturnSettling;
 }
 
@@ -88,8 +89,8 @@ CalStatus CalController::tick(const CalContext& c, double now)
     }
     const int got = port_.captured();
     if (got >= need_) return measure(c);
-    if (got >= need_ - cal::kWindowSamples) status_ = CalStatus::ReturnMeasuring;
-    if (elapsed > static_cast<double>(need_) / cal::kToneFs + kReturnSlackSeconds) finish(CalStatus::NoReturn);
+    if (got >= need_ - window_) status_ = CalStatus::ReturnMeasuring;
+    if (elapsed > static_cast<double>(need_) / fs_ + kReturnSlackSeconds) finish(CalStatus::NoReturn);
     return status_;
 }
 
@@ -101,7 +102,7 @@ CalStatus CalController::measure(const CalContext& c)
     // a mono send leaves on one output at trim + offset[0]; a stereo return then measures both inputs against that one level
     const float sendEff[2] = { c.sendTrimDb + c.sendOffsetDb[0], c.sendTrimDb + (c.sendStereo ? c.sendOffsetDb[1] : c.sendOffsetDb[0]) };
     const float sent[2] = { c.vuRefDbfs + sendEff[0], c.vuRefDbfs + sendEff[1] };
-    const auto g = cal::measureLoopGain(capL_.data(), capR_.data(), need_, need_ - cal::kWindowSamples, cal::kWindowSamples,
+    const auto g = cal::measureLoopGain(capL_.data(), capR_.data(), need_, need_ - window_, window_,
                                         sent, c.retStereo);
     if (g.clipped) return status_ = CalStatus::ReturnClipped;
     if (g.noSignal) return status_ = CalStatus::NoReturn;

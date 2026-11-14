@@ -145,11 +145,11 @@ bool RenderArbiter::onCommandPre (int cmd, ReaProject* proj)
     std::string refusing;
     for (const InstanceView& v : instances ? instances() : std::vector<InstanceView> {})
     {
-        // Idle = no device claimed (or released): plain pass-through, no hardware loop to carry — not in the §10 blocking list
+        // Idle = no device claimed (or released): plain pass-through, no hardware loop to carry – not in the §10 blocking list
         if (v.bypassed || v.state == State::Idle || t - v.lastProcessedMs > kInvolvedMs) continue;
         ++involved;
         // Locked only, in both modes: an Effect instance reaches Locked through the driver path (no probe), so the mode
-        // is no substitute — a Failed / Unavailable / Stale Effect instance is dry pass-through (§10)
+        // is no substitute – a Failed / Unavailable / Stale Effect instance is dry pass-through (§10)
         const bool ok = v.state == State::Locked;
         if (! ok) refusing += (refusing.empty() ? "" : ", ") + v.track + " (" + stateName (v.state) + ")";
     }

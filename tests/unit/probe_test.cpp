@@ -109,7 +109,7 @@ TEST_CASE("probe_edges_follow_a_raised_cosine_envelope")
 TEST_CASE("probe_spectrum_is_band_limited")
 {
     // Above the band: ≥ 60 dB down (brief). Below the band the brief's "< 30 Hz ≥ 60 dB down" is unattainable with the spec's
-    // own probe (F1 §8: 40 Hz start, 10 ms edges — the edge is < half a 40 Hz cycle and the sweep's skirt at 30 Hz is only
+    // own probe (F1 §8: 40 Hz start, 10 ms edges – the edge is < half a 40 Hz cycle and the sweep's skirt at 30 Hz is only
     // 0.4 octave away; even 100 ms edges reach −34 dB). Ruled: pin the spec design's measured low skirt instead (−15 dB < 30 Hz,
     // −26.5 dB < 10 Hz, DC −29.9 dB relative to the in-band maximum) with ~1.5 dB margin.
     const ProbeGenerator g { ProbeSpec {} };

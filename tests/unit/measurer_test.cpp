@@ -33,6 +33,7 @@ Correlator& correlator()
 struct FakeIo final : ProbeIo
 {
     int32_t D[2] { 1000, 1000 };
+    float split[2] { 0.0f, 0.0f };          // fractional delay: this share of the click arrives one sample later (D + 1)
     float gainDb = 0.0f;
     bool noiseOnly = false;
     // Transport playing: the send carries loud program (about −12 dBFS) whenever no probe is armed, and that program comes
@@ -89,7 +90,13 @@ private:
                 h ^= h >> 13; h *= 0x5bd1e995u; h ^= h >> 15;
                 dst[i] = 0.03f * (static_cast<float>(h & 0xffffu) / 32768.0f - 1.0f);
             }
-            else dst[i] = (i >= d && i - d < armedN) ? armed[i - d] * g : 0.0f;
+            else
+            {
+                const float f = split[ch];
+                const float now = (i >= d && i - d < armedN) ? armed[i - d] : 0.0f;
+                const float late = (i >= d + 1 && i - d - 1 < armedN) ? armed[i - d - 1] : 0.0f;
+                dst[i] = ((1.0f - f) * now + f * late) * g;
+            }
             if (playing && ! noiseOnly && (! progEnd || armAt + i - d < *progEnd))   // program sent before the send went silent
             {
                 uint32_t h = static_cast<uint32_t>(armAt + i - d) * 2246822519u ^ (ch * 3266489917u);
@@ -266,6 +273,30 @@ TEST_CASE("measurer_stereo_asymmetry_fails")
     REQUIRE(res.failReason == Reason::ChannelAsymmetry);
     REQUIRE(res.physLoop[0] == 1000);
     REQUIRE(res.physLoop[1] == 1001);
+}
+
+TEST_CASE("measurer_stereo_half_sample_straddle_locks_on_the_common_lag")
+{
+    // L at about 1000.14, R at about 1000.57: R's whole-sample peak is 1001, yet both are one loop (SSL EQ R at 872.5)
+    Rig r;
+    r.io.split[0] = 0.3f; r.io.split[1] = 0.52f;
+    r.m.start(6, unknown(), true, Rig::B);
+    REQUIRE(r.runUntilResult());
+    const auto& res = r.got[0].r;
+    REQUIRE(res.failReason == Reason::None);
+    REQUIRE(res.physLoop[0] == 1000);
+    REQUIRE(res.physLoop[1] == 1000);
+    REQUIRE(res.fractional[1] > 0.5f);   // R's residual against the common lag is kept for the diagnostics
+}
+
+TEST_CASE("measurer_stereo_lag_rule")
+{
+    REQUIRE(Measurer::stereoLag(872, 872.1, 872, 872.4) == 872);
+    REQUIRE(Measurer::stereoLag(872, 872.106, 873, 872.501) == 872);   // the Apollo SSL EQ result of 2026-11-14
+    REQUIRE(Measurer::stereoLag(873, 872.6, 872, 872.4) == 873);       // mean 872.5 rounds away from zero
+    REQUIRE(Measurer::stereoLag(1000, 1000.0, 1001, 1001.0) == -1);    // a whole sample of skew is a different loop
+    REQUIRE(Measurer::stereoLag(1000, 1000.2, 1002, 1001.6) == -1);    // two samples apart, never one loop
+    REQUIRE(Measurer::stereoLag(1000, 1000.0, 1001, 1000.51) == -1);   // skew 0.51 > kStereoSkewMax
 }
 
 TEST_CASE("measurer_stereo_symmetric_locks")

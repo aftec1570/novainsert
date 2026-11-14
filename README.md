@@ -1,9 +1,9 @@
 # NovaInsert
 
 **A REAPER-only VST3 hardware insert for macOS (Apple silicon), Windows (x64) and Linux (x86_64) that measures its own latency.**
-Version 1.2.1 · by [Hillside Studios](https://hillsidestudio.io) · free to use, provided as is without any warranty (see [License](#license)).
+Version 1.3.0 · by [Hillside Studios](https://hillsidestudio.io) · free to use, provided as is without any warranty (see [License](#license)).
 
-**[Download NovaInsert 1.2.1](https://github.com/aftec1570/novainsert/releases/latest)**: macOS (signed and notarized DMG) ·
+**[Download NovaInsert 1.3.0](https://github.com/aftec1570/novainsert/releases/latest)**: macOS (signed and notarized DMG) ·
 Windows x64 (zip) · Linux x86_64 (tar.gz, beta) ·
 [User manual](docs/manual/NovaInsert-User-Manual.md) ([PDF](docs/manual/NovaInsert-User-Manual.pdf))
 
@@ -29,7 +29,7 @@ repository). This page is the short version.
   blocks. REAPER's plug-in delay compensation does the rest.
 - **Renders without surprises.** Renders, freeze and render-to-stem-tracks run in realtime automatically, and your
   setting is restored afterwards. A render is refused, with a message naming the track, if any insert is not ready.
-- **Handles many devices.** Up to twenty instances in one project. Each physical channel has one owner; a second instance
+- **Handles many devices.** No limit on instances in one project (validated with twenty). Each physical channel has one owner; a second instance
   on the same channels waits instead of corrupting the first one.
 - **Gets the levels right.** A SEND meter referenced to +4 dBu, a RETURN meter referenced to your converter's alignment,
   trims from −24 to +12 dB, LINK, and a level calibration that puts the send at the outboard's working point and brings the
@@ -57,9 +57,9 @@ You are responsible for the routing, the monitoring level and the hardware. See 
 | Host | REAPER 7.83 or newer (validated on 7.83 and 7.85) |
 | Platform | macOS on Apple silicon (arm64); Windows 10 or 11 x64; Linux x86_64 with glibc 2.35 or newer (Ubuntu 22.04 or newer), beta |
 | Plug-in format | VST3 only |
-| Sample rate | 48 kHz |
+| Sample rate | 44.1, 48, 88.2, 96 or 192 kHz (macOS: hardware-validated on the Apollo at all five; change the rate only while stopped) |
 | Audio device | macOS: one specific CoreAudio device selected in REAPER, not the system default; Windows: the interface's native ASIO driver; Linux: one specific ALSA device (`hw:` or `plughw:`), not `default` |
-| Instances | up to 20 active instances validated |
+| Instances | no limit (20 active instances validated; more are up to your CPU at small buffers) |
 | Loop length | up to 65 536 samples |
 
 **Audio driver.** NovaInsert works only on REAPER's native driver for the platform: CoreAudio on macOS, ASIO on Windows,
@@ -77,17 +77,17 @@ validated in a virtual environment; hardware timing validation pending (beta). R
 
 ### macOS
 
-1. Download `NovaInsert-1.2.1-macOS-arm64.dmg` from the [release page](https://github.com/aftec1570/novainsert/releases/latest).
-2. Open the DMG and double-click "Install NovaInsert 1.2.1.pkg".
+1. Download `NovaInsert-1.3.0-macOS-arm64.dmg` from the [release page](https://github.com/aftec1570/novainsert/releases/latest).
+2. Open the DMG and double-click "Install NovaInsert 1.3.0.pkg".
 3. Read and accept the license agreement; the installer copies the plug-in to `/Library/Audio/Plug-Ins/VST3`.
    The package is signed with an Apple Developer ID and notarized by Apple, so macOS opens it without a security prompt.
 4. In REAPER: Options → Preferences → Plug-ins → VST → "Re-scan". Add "VST3: NovaInsert (Hillside Studios)" to a track.
 
 ### Windows
 
-1. Download `NovaInsert-1.2.1-Windows-x64.zip` and its `.sha256` from the
+1. Download `NovaInsert-1.3.0-Windows-x64.zip` and its `.sha256` from the
    [release page](https://github.com/aftec1570/novainsert/releases/latest); check it in PowerShell with
-   `Get-FileHash NovaInsert-1.2.1-Windows-x64.zip` against the value in the `.sha256` file.
+   `Get-FileHash NovaInsert-1.3.0-Windows-x64.zip` against the value in the `.sha256` file.
 2. Unpack the zip and copy the folder `NovaInsert.vst3` to `C:\Program Files\Common Files\VST3\` (needs administrator rights).
    The zip is not code-signed, so Windows or your browser may warn about an unknown publisher.
 3. In REAPER: select the ASIO driver of your interface (Options → Preferences → Audio → Device), then
@@ -95,9 +95,9 @@ validated in a virtual environment; hardware timing validation pending (beta). R
 
 ### Linux (beta)
 
-1. Download `NovaInsert-1.2.1-Linux-x86_64.tar.gz` and its `.sha256` from the
+1. Download `NovaInsert-1.3.0-Linux-x86_64.tar.gz` and its `.sha256` from the
    [release page](https://github.com/aftec1570/novainsert/releases/latest); check it with `sha256sum -c *.sha256`.
-2. `tar xzf NovaInsert-1.2.1-Linux-x86_64.tar.gz && ./install.sh` copies the plug-in to `~/.vst3` (no sudo). For all
+2. `tar xzf NovaInsert-1.3.0-Linux-x86_64.tar.gz && ./install.sh` copies the plug-in to `~/.vst3` (no sudo). For all
    users, copy `NovaInsert.vst3` to `/usr/lib/vst3/` instead.
 3. In REAPER: select the ALSA driver and a specific device, then Options → Preferences → Plug-ins → VST → "Re-scan".
 
@@ -111,13 +111,13 @@ name you give a preset is what the device list and the FX slot in REAPER's mixer
 
 Open the editor, press PRESET SETUP, then NEW:
 
-1. **Name** — the preset name; it appears in the FX slot the moment the preset is saved.
-2. **Send** — MONO or STEREO, then the physical output channel(s), picked by the name REAPER reports ("3 · Out 3").
+1. **Name** – the preset name; it appears in the FX slot the moment the preset is saved.
+2. **Send** – MONO or STEREO, then the physical output channel(s), picked by the name REAPER reports ("3 · Out 3").
    A mono send carries the average of the track's two channels on its one output.
-3. **Return** — MONO or STEREO, then the physical input channel(s). A mono return feeds both channels of the track.
-4. **Mode** — INSERT for compressors, equalisers and other gear that keeps timing; EFFECT for reverbs and delays.
-5. **Interface / dBu at 0 dBFS / 0 VU reference / Outboard max** — the level settings, stored with the preset.
-6. **SAVE** — writes the preset, selects it in this instance and starts the measurement at once. Nothing about latency is
+3. **Return** – MONO or STEREO, then the physical input channel(s). A mono return feeds both channels of the track.
+4. **Mode** – INSERT for compressors, equalisers and other gear that keeps timing; EFFECT for reverbs and delays.
+5. **Interface / dBu at 0 dBFS / 0 VU reference / Outboard max** – the level settings, stored with the preset.
+6. **SAVE** – writes the preset, selects it in this instance and starts the measurement at once. Nothing about latency is
    stored with a preset: every selection measures the loop again, so a preset is always checked against the hardware as
    it is now.
 
@@ -166,7 +166,7 @@ right corner between 50 % and 300 %; everything is vector-drawn, so it stays sha
 | red | Failed | the measurement did not lock; the reason is on the status line |
 | red | Unavailable | the channels are owned by another instance, or the audio device is gone |
 | red | Unsupported host | a REAPER setting NovaInsert needs is off (anticipative FX) or the REAPER version lacks an API |
-| red | Unsupported sample rate | the project is not at 48 kHz |
+| red | Unsupported sample rate | the device runs at a rate other than 44.1, 48, 88.2, 96 or 192 kHz |
 
 ![Measuring](docs/manual/img/measuring.png)
 
@@ -234,10 +234,10 @@ mode is as exact as the driver's figure, not sample-measured.
 
 ## Mono and stereo routing
 
-- **Stereo send** — L to the first output, R to the second. No summing, no swapping.
-- **Mono send** — (L + R) / 2 to the one output; a mono track leaves at exactly its own level.
-- **Stereo return** — the first input to L, the second to R.
-- **Mono return** — the one input to both channels of the track.
+- **Stereo send** – L to the first output, R to the second. No summing, no swapping.
+- **Mono send** – (L + R) / 2 to the one output; a mono track leaves at exactly its own level.
+- **Stereo return** – the first input to L, the second to R.
+- **Mono return** – the one input to both channels of the track.
 
 For a stereo send or return the main panel shows a SEND or RETURN selector: STEREO uses both channels of the unit, L or R
 uses only that side as a mono loop. The selectors are part of the calibration key, so changing them re-measures.
@@ -289,9 +289,9 @@ pass have no hardware return yet. NovaInsert reports the gap instead of hiding i
 | Re-apply anticipative FX fix | trigger | the same as the button |
 | State, Physical loop, Reported PDC, Inherent gap, CAL action, CAL status | read only | for scripts and controllers |
 
-## Limitations of version 1.2.1
+## Limitations of version 1.3.0
 
-- 48 kHz, REAPER 7.83 or newer (validated on 7.83 and 7.85), VST3 only.
+- 44.1, 48, 88.2, 96 or 192 kHz (hardware-validated on the Apollo at all five; change the rate only with the transport stopped, every loop then re-measures on its own), REAPER 7.83 or newer (validated on 7.83 and 7.85), VST3 only.
 - macOS Apple silicon, Windows x64 and Linux x86_64 only. CoreAudio (macOS), ASIO (Windows) and ALSA (Linux) only.
 - Windows is validated on one interface (RME Babyface Pro) with cable loops; other ASIO interfaces are untested. The zip is not code-signed.
 - Linux is functionally validated in a virtual environment; hardware timing validation pending (beta).
@@ -333,7 +333,7 @@ Anyway"). Signed, notarized release build (the published DMG is built this way):
 1. Xcode → Settings → Accounts → Manage Certificates: create "Developer ID Application" and "Developer ID Installer".
 2. `xcrun notarytool store-credentials novainsert --apple-id <Apple Account> --team-id <TEAMID>` (app-specific password).
 3. `NI_SIGN_IDENTITY="Developer ID Application: <Name> (<TEAMID>)" NI_INSTALLER_IDENTITY="Developer ID Installer: <Name> (<TEAMID>)"
-   NI_NOTARY_PROFILE=novainsert tools/make_installer.sh` — signs the VST3 (hardened runtime, timestamp) and the pkg,
+   NI_NOTARY_PROFILE=novainsert tools/make_installer.sh` – signs the VST3 (hardened runtime, timestamp) and the pkg,
    notarizes and staples the pkg and the DMG, and ends with `spctl --assess` on the pkg ("accepted, source=Notarized Developer ID").
 
 ### User manual

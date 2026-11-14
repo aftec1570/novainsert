@@ -1,6 +1,6 @@
-// RT-safety audit (plan Task 26 Step 1, F1 §14): one simulated session driven through the real RT entry points —
+// RT-safety audit (plan Task 26 Step 1, F1 §14): one simulated session driven through the real RT entry points –
 // HookDispatcher::onAudioBuffer (the static trampoline REAPER calls, fanning out to Instance::onPre/onPost) and
-// Instance::process + MeterEngine::feed + SlotLoopEngine::cutProbe (processBlock) — with message-thread actions between
+// Instance::process + MeterEngine::feed + SlotLoopEngine::cutProbe (processBlock) – with message-thread actions between
 // cycles: prepare, idle cycles, play, a probe measurement, the measured lock (PDC change), a seek, bypass toggles (no
 // processBlock calls), trim/selector changes, a record cut and a stop. Allocations are counted ONLY inside the RT calls;
 // the message-thread actions run under the same live guard but outside the counted regions. 10 000 device cycles at B = 64.

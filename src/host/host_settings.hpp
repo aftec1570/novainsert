@@ -1,9 +1,9 @@
-// HostSettings — ownership-based anticipative-FX handling (F1 §5, plan Task 9; R-HOOK-3/R-HOOK-4).
+// HostSettings – ownership-based anticipative-FX handling (F1 §5, plan Task 9; R-HOOK-3/R-HOOK-4).
 // Message thread only. Every instance requires I_PERFFLAGS bit 2 ("no anticipative FX") on its own track and all
 // folder ancestors. Records per track: the value before our write, the value we wrote, and the requiring instances.
 // release() restores a track only when nobody else requires it, the current value is still ours, and the previous
 // value had bit 2 clear. recheck() (500 ms) follows reorders and reports a user-cleared bit once per our write
-// (onViolation); the bit is never set again automatically — reapply() is the explicit GUI/ReaScript offer.
+// (onViolation); the bit is never set again automatically – reapply() is the explicit GUI/ReaScript offer.
 #pragma once
 #include <functional>
 #include <map>

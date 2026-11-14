@@ -56,10 +56,10 @@ fi
 cp "$ROOT/LICENSE.md" "$WORK/dmg/LICENSE.md"
 # the user manual (docs/manual, built by tools/manual_build.py; the PDF is committed so a release needs no Chrome)
 MANUAL="$ROOT/docs/manual/NovaInsert-User-Manual.pdf"
-[ -f "$MANUAL" ] || { echo "missing $MANUAL — run: python3 -I tools/manual_build.py docs/manual/NovaInsert-User-Manual.md docs/manual/NovaInsert-User-Manual.html $MANUAL" >&2; exit 2; }
+[ -f "$MANUAL" ] || { echo "missing $MANUAL – run: python3 -I tools/manual_build.py docs/manual/NovaInsert-User-Manual.md docs/manual/NovaInsert-User-Manual.html $MANUAL" >&2; exit 2; }
 cp "$MANUAL" "$WORK/dmg/NovaInsert User Manual.pdf"
 cat > "$WORK/dmg/READ ME FIRST.txt" <<TXT
-NovaInsert $VERSION — REAPER-only VST3 hardware insert plug-in for macOS (Apple silicon)
+NovaInsert $VERSION – REAPER-only VST3 hardware insert plug-in for macOS (Apple silicon)
 
 1. Double-click "Install NovaInsert $VERSION.pkg" and follow the steps (you must accept the license).
 2. In REAPER: Options > Preferences > Plug-ins > VST > Re-scan, then add "VST3: NovaInsert" to a track.

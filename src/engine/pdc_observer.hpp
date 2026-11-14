@@ -3,8 +3,8 @@
 // ≥ 1 cycle or a playhead position step; begun while stopped: the first play segment) → StableLatencyAccepted (2 further
 // cycles with every tag matching and contiguous positions). Window max(500 ms, 8 cycles) from the call while the transport
 // runs, from the next play when stopped; TimedOut is sticky until the next begin.
-// Thread contract: begin/onTransport/poll — message thread. onProcessBlock (processBlock) and onCycle (slot engine status,
-// one call per hook cycle) — one RT thread, allocation- and lock-free; RT-only counters reset when the epoch changes.
+// Thread contract: begin/onTransport/poll – message thread. onProcessBlock (processBlock) and onCycle (slot engine status,
+// one call per hook cycle) – one RT thread, allocation- and lock-free; RT-only counters reset when the epoch changes.
 #pragma once
 #include <algorithm>
 #include <atomic>
@@ -18,14 +18,15 @@ class HostTransitionObserver
 public:
     enum class Phase : uint8_t { Idle, LatencyChangeRequested, HostTransitionObserved, StableLatencyAccepted, TimedOut };
 
-    void begin (int32_t oldR, int32_t newR, int hwBlock, bool transportRunning, int64_t nowMs) noexcept
+    void begin (int32_t oldR, int32_t newR, int hwBlock, bool transportRunning, int64_t nowMs, int fs = kDefaultSampleRate) noexcept
     {
+        fs = std::max (1, fs);
         const int32_t d = newR - oldR;
         const int b = std::max (1, hwBlock);
         delta_.store (d, std::memory_order_relaxed);
         block_.store (b, std::memory_order_relaxed);
         need_.store (((d < 0 ? -d : d) + b - 1) / b, std::memory_order_relaxed);
-        const int64_t cyclesMs = (8LL * b * 1000 + kSampleRate - 1) / kSampleRate;
+        const int64_t cyclesMs = (8LL * b * 1000 + fs - 1) / fs;   // 8 hook cycles at the device rate
         windowMs_ = std::max<int64_t> (500, cyclesMs);
         windowStart_ = transportRunning ? nowMs : -1;
         epoch_.fetch_add (1, std::memory_order_relaxed);

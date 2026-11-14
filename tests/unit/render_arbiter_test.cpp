@@ -106,7 +106,7 @@ TEST_CASE("arbiter_no_involved_instance_observes_only")
 TEST_CASE("arbiter_effect_mode_requires_locked")
 {
     // F4 final review: an Effect instance reaches Locked without a probe (driver round-trip); the mode itself is no
-    // substitute for Locked — a Failed / Unavailable (PairConflict, DeviceLost) / Stale Effect instance would otherwise
+    // substitute for Locked – a Failed / Unavailable (PairConflict, DeviceLost) / Stale Effect instance would otherwise
     // render dry pass-through with no refusal (spec §10 blocking list).
     Rig r;
     r.add(State::Failed, "Fx", Mode::Effect);
@@ -392,7 +392,7 @@ TEST_CASE("arbiter_idle_instance_without_a_device_neither_blocks_nor_counts")
 }
 
 // S6 review C1: the open dialog keeps its own copy of the settings (2) and pushes it into the project whenever a render starts
-// (F0.4); a render run from a shortcut while it is open must not restore under it — only the tick, once the window is gone.
+// (F0.4); a render run from a shortcut while it is open must not restore under it – only the tick, once the window is gone.
 TEST_CASE("arbiter_render_inside_the_open_dialog_keeps_the_arm_until_the_window_closes")
 {
     Rig r;
@@ -429,7 +429,7 @@ TEST_CASE("arbiter_brackets_the_render_dialog_command_for_window_tracking")
     REQUIRE(calls == std::vector<std::string> { "opening", "opened" });
 }
 
-// S6 review I1: the last instance removed while the dialog holds the arm — the arbiter's end restores
+// S6 review I1: the last instance removed while the dialog holds the arm – the arbiter's end restores
 TEST_CASE("arbiter_destroyed_while_armed_restores_the_value")
 {
     {

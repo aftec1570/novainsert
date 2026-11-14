@@ -1,10 +1,10 @@
-// NovaInsert engine core — version constants. Header-only, dependency-free (ni::engine).
+// NovaInsert engine core – version constants. Header-only, dependency-free (ni::engine).
 #pragma once
 #include <string_view>
 
 namespace ni::engine
 {
-inline constexpr std::string_view kVersion = "1.2.1";
+inline constexpr std::string_view kVersion = "1.3.0";
 // Calibration algorithm version: part of CalibKey (F1 §4). Bump whenever probe/correlator/lock semantics change.
 inline constexpr int kCalibAlgorithmVersion = 1;
 } // namespace ni::engine

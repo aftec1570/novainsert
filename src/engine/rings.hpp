@@ -1,4 +1,4 @@
-// NovaInsert engine core — bounded lock-free rings (F1 §1 thread model, §14 RT-safety; v3 §19 queue contracts).
+// NovaInsert engine core – bounded lock-free rings (F1 §1 thread model, §14 RT-safety; v3 §19 queue contracts).
 // Header-only, dependency-free. Ported from the F0.6 spike (0 lost/torn records in every gated cell at 32–2048).
 #pragma once
 #include <atomic>
@@ -7,14 +7,14 @@
 
 namespace ni::engine
 {
-// Spsc<T, CAP> — single-producer / single-consumer ring.
+// Spsc<T, CAP> – single-producer / single-consumer ring.
 //   producer: exactly one thread calls push();  consumer: exactly one thread calls pop()/peek()/drop(); size() any thread
 //   (a snapshot: exact on the producer/consumer thread, bounded to [0, CAP] elsewhere). drop() on an empty ring is a no-op.
 //   capacity: CAP elements (power of two), storage inline (no heap after construction).
-//   overflow: push() returns false and writes nothing — the caller counts the drop.
+//   overflow: push() returns false and writes nothing – the caller counts the drop.
 //   memory order: head/tail are release-stored by their owner and acquire-loaded by the other side, so the element write
 //   happens-before the consumer's read of head and the element read happens-before the producer's read of tail.
-//   lifecycle: trivially constructible T; no destructor work; no reset — construct a new ring when both sides are quiescent.
+//   lifecycle: trivially constructible T; no destructor work; no reset – construct a new ring when both sides are quiescent.
 template <typename T, std::size_t CAP>
 class Spsc
 {
@@ -64,13 +64,13 @@ private:
     alignas(64) std::atomic<uint64_t> tail_ { 0 };
 };
 
-// Mpsc<T, CAP> — multi-producer / single-consumer bounded ring (Vyukov sequence-per-cell design).
+// Mpsc<T, CAP> – multi-producer / single-consumer bounded ring (Vyukov sequence-per-cell design).
 //   producers: any number of threads call push() concurrently (CAS on head_);  consumer: exactly one thread calls pop().
 //   capacity: CAP elements (power of two), inline storage.
-//   overflow: push() returns false when the ring is full (no wait, no overwrite) — the caller counts the drop.
+//   overflow: push() returns false when the ring is full (no wait, no overwrite) – the caller counts the drop.
 //   memory order: a producer claims a cell with a relaxed CAS, writes the element, then release-stores seq = pos + 1; the
 //   consumer acquire-loads seq, reads the element, then release-stores seq = pos + CAP to hand the cell back.
-//   lifecycle: trivially constructible T; construction initialises every cell's seq; no reset — construct a new ring.
+//   lifecycle: trivially constructible T; construction initialises every cell's seq; no reset – construct a new ring.
 template <typename T, std::size_t CAP>
 class Mpsc
 {

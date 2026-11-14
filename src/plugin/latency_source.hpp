@@ -1,6 +1,6 @@
 #pragma once
 // Where an instance's loop latency comes from (Effect PDC spec 2026-11-04 §2; F1 §3/§8/§20): Insert measures it (probe); Effect
-// never probes and takes the driver's own round-trip — GetInputOutputLatency in + out at the current buffer size — as physLoop,
+// never probes and takes the driver's own round-trip – GetInputOutputLatency in + out at the current buffer size – as physLoop,
 // reported with the same margin rule as a measured loop (Instance::reportedFor). A negative driver value or a round-trip beyond
 // kLMax − 2B: no probe, OutOfRange. Read on the message thread only.
 #include <cstdint>

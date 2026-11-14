@@ -14,7 +14,7 @@ This manual covers version 1.0.1. The plug-in is free to use and comes as is, wi
 - **Keeps the result right.** If the buffer size, the audio device, the routing or the mode changes, the plug-in re-measures or re-applies a stored calibration on its own and tells you why. A wrong value is never used silently.
 - **Compensates exactly.** The delay reported to REAPER is the measured loop plus a two-block margin, rounded up to whole blocks. REAPER's plug-in delay compensation does the rest.
 - **Renders without surprises.** Starting a render switches REAPER to realtime rendering automatically and restores your setting afterwards. A render is refused, with a message naming the track, if any insert is not ready.
-- **Handles many devices.** Up to twenty instances in one project. Each physical channel has one owner; a second instance on the same channels waits instead of corrupting the first one.
+- **Handles many devices.** No limit on instances in one project (validated with twenty). Each physical channel has one owner; a second instance on the same channels waits instead of corrupting the first one.
 - **Gets the levels right.** A SEND meter referenced to +4 dBu, a RETURN meter referenced to your converter's alignment, trims from −24 to +12 dB, LINK, and a level calibration that puts the send at the outboard's working point and brings the return back to digital unity.
 - **Explicit mono and stereo.** Each preset says whether its send and its return are mono or stereo. A mono send carries the track's mix on one output; a mono return comes back on both sides. A stereo unit can also be used one side at a time. Nothing passes through unseen.
 - **A device library.** Every unit is a named record. Pick "Pultec" and the FX slot in the mixer reads "Pultec".
@@ -36,9 +36,9 @@ You are responsible for the routing, the monitoring level and the hardware. See 
 |---|---|
 | Host | REAPER 7.83 or newer (validated on 7.83 and 7.85), macOS, Apple silicon (arm64) |
 | Plug-in format | VST3 only |
-| Sample rate | 48 kHz |
+| Sample rate | 44.1, 48, 88.2, 96 or 192 kHz (macOS: hardware-validated on the Apollo at all five; change the rate only while stopped) |
 | Audio device | one specific CoreAudio device selected in REAPER, not the system default |
-| Instances | up to 20 active instances validated |
+| Instances | no limit (20 active instances validated; more are up to your CPU at small buffers) |
 | Loop length | up to 65 536 samples |
 
 **Install from the DMG**
@@ -56,13 +56,13 @@ A device is a preset: a name, a mono or stereo send with its output channel(s), 
 
 Open the editor (any instance), press PRESET SETUP and then NEW:
 
-1. **Name** — type the preset name. It appears in the FX slot the moment the preset is saved.
-2. **Send** — MONO or STEREO, then the physical output channel(s) of the audio interface, picked by the name REAPER reports for them ("3 · Out 3"). A mono send shows one picker; the signal that leaves on it is the average of the track's two channels, so a mono unit never needs two outputs.
-3. **Return** — MONO or STEREO, then the physical input channel(s) the return arrives on. A mono return shows one picker; what comes back on it feeds both channels of the track.
+1. **Name** – type the preset name. It appears in the FX slot the moment the preset is saved.
+2. **Send** – MONO or STEREO, then the physical output channel(s) of the audio interface, picked by the name REAPER reports for them ("3 · Out 3"). A mono send shows one picker; the signal that leaves on it is the average of the track's two channels, so a mono unit never needs two outputs.
+3. **Return** – MONO or STEREO, then the physical input channel(s) the return arrives on. A mono return shows one picker; what comes back on it feeds both channels of the track.
 4. Send and return are independent: a mono-in, stereo-out unit is a mono send with a stereo return.
-5. **Mode** — INSERT for compressors, equalisers and other gear that keeps timing; EFFECT for reverbs and delays (chapter 11).
-6. **Interface / dBu at 0 dBFS / 0 VU reference / Outboard max** — the level settings of chapter 10, stored with the preset.
-7. **SAVE** — writes the preset, selects it in this instance and starts the measurement at once. Nothing about latency is stored with a preset: every selection measures the loop again (chapter 7), so a preset is always checked against the hardware as it is now.
+5. **Mode** – INSERT for compressors, equalisers and other gear that keeps timing; EFFECT for reverbs and delays (chapter 11).
+6. **Interface / dBu at 0 dBFS / 0 VU reference / Outboard max** – the level settings of chapter 10, stored with the preset.
+7. **SAVE** – writes the preset, selects it in this instance and starts the measurement at once. Nothing about latency is stored with a preset: every selection measures the loop again (chapter 7), so a preset is always checked against the hardware as it is now.
 
 ![A new preset](img/devices_new.png)
 
@@ -155,7 +155,7 @@ The lamp colour tells you whether the return is aligned:
 | red | Failed | the measurement did not lock; the reason is on the status line |
 | red | Unavailable | the channels are owned by another instance, or the audio device is gone |
 | red | Unsupported host | a REAPER setting NovaInsert needs is off (see anticipative FX) or the REAPER version lacks an API |
-| red | Unsupported sample rate | the project is not at 48 kHz |
+| red | Unsupported sample rate | the device runs at a rate other than 44.1, 48, 88.2, 96 or 192 kHz |
 
 ![Measuring](img/measuring.png)
 
@@ -173,7 +173,7 @@ A failed measurement names its cause. The most common: no signal came back (cabl
 
 ![Measure on open failed: the saved latency is used](img/open_fallback.png)
 
-"Open check failed: <reason> — saved latency in use" means the return is aligned as it was when you saved, but this session could not confirm it. Fix the cause (the reason is the same as in the table in chapter 18) and press RE-CALIBRATION to measure again; a successful measurement clears the message. With the box unticked, a project reopens on its saved latency without any clicks, as long as nothing in that list changed; anything changed is always measured.
+"Open check failed: <reason> – saved latency in use" means the return is aligned as it was when you saved, but this session could not confirm it. Fix the cause (the reason is the same as in the table in chapter 18) and press RE-CALIBRATION to measure again; a successful measurement clears the message. With the box unticked, a project reopens on its saved latency without any clicks, as long as nothing in that list changed; anything changed is always measured.
 
 **RE-CALIBRATION.** The button under SETUP measures the loop again, through the same queue as any other measurement. It is available only when a calibration failed:
 
@@ -245,7 +245,7 @@ Most outboard expects line level around +4 dBu. A converter aligned to +24 dBu a
 
 If the return clips at the converter the calibration writes nothing and asks you to lower the outboard's output; a trim after the converter cannot undo an overloaded input.
 
-**What is stored.** A RETURN CAL result is written to the running instance and as the default of the device record, so every new use of that device starts from it. When a project's stored values differ from the library defaults, the status line says "Device defaults changed — see SETUP" and SETUP offers "APPLY DEVICE DEFAULTS"; nothing is applied on its own.
+**What is stored.** A RETURN CAL result is written to the running instance and as the default of the device record, so every new use of that device starts from it. When a project's stored values differ from the library defaults, the status line says "Device defaults changed – see SETUP" and SETUP offers "APPLY DEVICE DEFAULTS"; nothing is applied on its own.
 
 CAL is refused, with a message, while recording, without an owned device, and while a latency measurement is running (a measurement that starts during SEND CAL cancels it). RETURN CAL also needs Insert mode. SEND CAL reports "no track signal within 30 s" when nothing played, and "too quiet or too loud for the trim range" when the needed trim lies outside −24…+12 dB; neither writes anything.
 
@@ -297,10 +297,10 @@ Switching the mode re-evaluates the latency source; in Insert mode that means a 
 
 The preset says whether the send and the return are mono or stereo; the two are independent.
 
-- **Stereo send** — the track's L channel goes to the first output, R to the second. No summing, no swapping.
-- **Mono send** — the average of the track's two channels, (L + R) / 2, goes to the one output. A mono track (the same signal on both channels) therefore leaves at exactly its own level, and nothing has to be sent twice.
-- **Stereo return** — the first input returns to L, the second to R.
-- **Mono return** — the one input returns to both channels of the track. No channel is left silent.
+- **Stereo send** – the track's L channel goes to the first output, R to the second. No summing, no swapping.
+- **Mono send** – the average of the track's two channels, (L + R) / 2, goes to the one output. A mono track (the same signal on both channels) therefore leaves at exactly its own level, and nothing has to be sent twice.
+- **Stereo return** – the first input returns to L, the second to R.
+- **Mono return** – the one input returns to both channels of the track. No channel is left silent.
 
 For a stereo send or return the main panel shows a SEND or RETURN selector: STEREO uses both channels of the unit; L or R uses only that side as a mono loop, with the same (L + R) / 2 send and the same return to both sides as a mono preset. The unused output of the unit is never written. Mixed choices such as a one-sided send with a stereo return are allowed, but in Insert mode the loop can only lock when the unit really returns the signal on both inputs.
 
@@ -378,24 +378,25 @@ The snapshot means a later edit of the library cannot change how an old project 
 | Repeated probes disagreed | the three clicks came back at different delays | an unstable clock or a device changing its latency; check the clock source |
 | Left and right loops differ | a stereo record measured two different delays | the two channels take different paths; use two mono records |
 | REAPER did not apply the new latency in time | PDC was not picked up | press play once; if it stays, reopen the audio device |
-| Only 48 kHz is supported | the project runs at another rate | set the project and the device to 48 kHz |
+| Unsupported rate (44.1/48/88.2/96/192 kHz) | the device runs at another rate (e.g. 176.4 or 32 kHz) | set the device to one of the supported rates |
+| Sample rate changed | the device rate changed | nothing: the latency check runs again on its own, and a calibration stored for that rate is reused. Change the rate only while stopped, never during playback or recording |
 | Select a specific audio device, not <default> | REAPER uses the system default device | pick the interface by name in REAPER's audio device settings |
 | Another instance uses this device | channel conflict | wait, or change one of the records |
 | Measurement paused while recording | a measurement was due during recording | it resumes when recording stops |
 | Anticipative FX processing is on for this track | you re-enabled it | press RE-APPLY ANTICIPATIVE FX |
 | Audio device lost | REAPER lost the interface | reconnect; the instance re-measures when it returns |
 | REAPER delivers no audio on this preset's channel… | the preset uses an input or output REAPER reports but does not pass on (outside the enabled input/output range, or a channel the driver lists but does not serve); the warning line names it, e.g. "Not delivered by REAPER: input 25" | enable that channel in Preferences > Audio > Device, or pick channels that are delivered; the instance measures as soon as it is |
-| Open check failed: <reason> — saved latency in use | the measurement on project open did not lock; the latency saved with the project is running | fix the cause named after the colon, then press RE-CALIBRATION |
-| Unvalidated host version <v> | REAPER is not one of the validated versions (7.83, 7.85) | informational; everything runs |
+| Open check failed: <reason> – saved latency in use | the measurement on project open did not lock; the latency saved with the project is running | fix the cause named after the colon, then press RE-CALIBRATION |
+| Unvalidated host version <v> | REAPER is older than 7.6 | informational; update REAPER (7.83 or newer is the requirement) |
 | Device library: … | the JSON file is missing, unreadable, read-only or newer than this version | fix the file; nothing was overwritten |
-| SEND CAL: play the track — 3 s of it set to 0 VU = +4 dBu | SEND CAL is listening to the track | chapter 9 |
+| SEND CAL: play the track – 3 s of it set to 0 VU = +4 dBu | SEND CAL is listening to the track | chapter 9 |
 | Return clipped: lower the outboard output | RETURN CAL refused | chapter 9 |
 | Loop gain outside the trim range | the return differs from the send by more than the trims can correct | check the unit's gain structure |
 | CAL needs Insert mode / is not available while recording / Select a free device first / Wait for the latency measurement | CAL preconditions | see chapter 9 |
 
 ## 19. Limitations of version 1.0.1
 
-- 48 kHz, REAPER 7.83 or newer (validated on 7.83 and 7.85), macOS Apple silicon, VST3 only.
+- 44.1, 48, 88.2, 96 or 192 kHz (hardware-validated on the Apollo at all five; change the rate only with the transport stopped, every loop then re-measures on its own), REAPER 7.83 or newer (validated on 7.83 and 7.85), macOS Apple silicon, VST3 only.
 - Presets are stored by position: deleting one shifts the later ones in projects that have not been reopened since (chapter 4).
 - The first "loop length" samples of each play or render pass have no hardware return (chapter 13).
 - Effect mode alignment is driver-reported, not sample-measured.

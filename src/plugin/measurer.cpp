@@ -23,7 +23,7 @@ LockInputs same(const CorrResult& r, uint32_t gen, int B) noexcept
 
 Measurer::Measurer(ProbeIo& io, CorrelationWorker& worker, const ProbeGenerator& probe, std::function<int64_t()> nowMs, int attempts)
     : io_(io), worker_(worker), probe_(probe), now_(std::move(nowMs)), len_(probe.length()), attempts_(std::clamp(attempts, 1, kAttempts)),
-      drainMs_((static_cast<int64_t>(probe.length() - probe.sweepStart() - probe.sweepLength()) + kLMax) * 1000 / kSampleRate + 1),
+      drainMs_(drainMsAt(probe, kDefaultSampleRate)),
       probeBuf_(static_cast<size_t>(probe.length())), capL_(probeBuf_.size()), capR_(probeBuf_.size())
 {
     probe_.render(probeBuf_.data(), 0.0f);
@@ -35,6 +35,15 @@ Measurer::Measurer(ProbeIo& io, CorrelationWorker& worker, const ProbeGenerator&
     }
     sweepRmsDb_ = static_cast<float>(10.0 * std::log10(s / probe.sweepLength()));
 }
+
+// Post-probe silence + L_max in flight, as time at the device rate (the probe's sample counts are fixed).
+int64_t Measurer::drainMsAt(const ProbeGenerator& probe, int fs) noexcept
+{
+    const int64_t f = fs > 0 ? fs : kDefaultSampleRate;
+    return (static_cast<int64_t>(probe.length() - probe.sweepStart() - probe.sweepLength()) + kLMax) * 1000 / f + 1;
+}
+
+void Measurer::setSampleRate(int fs) noexcept { drainMs_ = drainMsAt(probe_, fs); }
 
 void Measurer::start(uint32_t generation, const LevelHistory& history, bool stereo, int hwBlock)
 {
@@ -199,6 +208,14 @@ void Measurer::processResult()
     ++results_;
 }
 
+int32_t Measurer::stereoLag(int32_t lagL, double posL, int32_t lagR, double posR) noexcept
+{
+    if (lagL == lagR) return lagL;
+    if (std::abs(lagL - lagR) != 1 || std::fabs(posL - posR) > kStereoSkewMax) return -1;
+    const auto m = static_cast<int32_t>(std::lround(0.5 * (posL + posR)));
+    return m == lagL || m == lagR ? m : -1;
+}
+
 void Measurer::evaluate()
 {
     CalibResult res {};
@@ -222,7 +239,14 @@ void Measurer::evaluate()
         res.snrDb[c] = static_cast<float>(std::min({ lat_[c][0].snrDb, lat_[c][1].snrDb, lat_[c][2].snrDb }));
         for (const auto& q : lat_[c]) { retPk = std::max(retPk, q.returnPeakDbfs); retRms += q.returnRmsDbfs; }
     }
-    if (why == Reason::None && stereo_ && res.physLoop[0] != res.physLoop[1]) why = Reason::ChannelAsymmetry;
+    if (why == Reason::None && stereo_ && res.physLoop[0] != res.physLoop[1])
+    {
+        const double pos[2] = { lat_[0][0].fractional, lat_[1][0].fractional };
+        const int32_t common = stereoLag(res.physLoop[0], pos[0], res.physLoop[1], pos[1]);
+        if (common < 0) why = Reason::ChannelAsymmetry;
+        else
+            for (int c = 0; c < 2; ++c) { res.physLoop[c] = common; res.fractional[c] = static_cast<float>(pos[c] - common); }
+    }
     res.sendPeakDb = latLevelDb_;
     res.sendRmsDb = latLevelDb_ + sweepRmsDb_;
     res.returnPeakDb = static_cast<float>(retPk);

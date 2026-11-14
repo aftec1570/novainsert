@@ -16,7 +16,7 @@ if(UNIX AND NOT APPLE)
   target_link_libraries(novainsert_host PUBLIC pthread dl rt)
 endif()
 
-# Device library read side (juce::JSON) — separate so the host library stays JUCE-free.
+# Device library read side (juce::JSON) – separate so the host library stays JUCE-free.
 add_library(novainsert_library STATIC plugin/library.cpp plugin/library.hpp plugin/library_json.hpp plugin/persistence.cpp plugin/persistence.hpp plugin/cal_controller.cpp plugin/cal_controller.hpp)
 target_include_directories(novainsert_library PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(novainsert_library PUBLIC juce::juce_core)

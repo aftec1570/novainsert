@@ -51,7 +51,7 @@ std::string currentThreadName();
 } // namespace platform
 
 // Exclusive advisory lock on one file for the scope (shared by every process using a library directory): flock on POSIX,
-// LockFileEx on Windows. Best effort — a lock that cannot be taken does not stop the caller (same as the flock original).
+// LockFileEx on Windows. Best effort – a lock that cannot be taken does not stop the caller (same as the flock original).
 class FileLock
 {
 public:

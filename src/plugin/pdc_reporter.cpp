@@ -35,7 +35,7 @@ void PdcReporter::cancel() noexcept
 
 void PdcReporter::apply (int32_t R, int64_t nowMs)
 {
-    obs_.begin (reported_, R, block_, playing_, nowMs);
+    obs_.begin (reported_, R, block_, playing_, nowMs, fs_);
     set_ (R);
     reported_ = R;
     pendingR_ = -1;
@@ -54,7 +54,7 @@ void PdcReporter::onTransport (bool playing, int64_t nowMs)
     // The one automatic retry (Q10): R is already reported, so re-observe the transition from this play segment.
     retryLeft_ = false; timedOut_ = false; stoppedAfterTimeout_ = false;
     if (! applyState_ (State::ApplyingLatency, Reason::None, gen_, nowMs, "retry")) return;
-    obs_.begin (reported_, reported_, block_, false, nowMs);
+    obs_.begin (reported_, reported_, block_, false, nowMs, fs_);
     obs_.onTransport (true, nowMs);
     awaiting_ = true;
 }

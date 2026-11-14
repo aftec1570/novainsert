@@ -1,4 +1,4 @@
-// Measurer — one instance's calibration sequence (F1 §7 attempts and lock, §8 levels and mute window; plan Task 15).
+// Measurer – one instance's calibration sequence (F1 §7 attempts and lock, §8 levels and mute window; plan Task 15).
 // Message-thread object driven by a 20 ms timer (tick()). Per attempt: mute (5 ms engine fade, one tick to settle) → level
 // probe at LevelPolicy::startLevelDb → LevelPolicy::nextLevelDb from its G_peak (no raise → stay) → 3 latency probes →
 // evaluateLock per channel (stereo: both channels must lock on the same lag, else ChannelAsymmetry) → unmute once the last
@@ -61,6 +61,12 @@ public:
     // after the probe start, + the probe's length + this guard (ringing, near echoes for the ambiguity check). A window
     // that runs to its end without an arrival fails the attempt (NoReturn) and drains: the return may still be in flight.
     static constexpr int32_t kGuardSamples = 960;   // 20 ms
+    // Stereo: one loop latency serves both channels. Whole-sample lags that differ by one are still one loop when the sub-sample
+    // positions lie this close: a channel at x.5 rounds either way from run to run (SSL EQ R at 872.5 on the Apollo, 2026-11-14).
+    // Both channels then take the rounded mean (residual <= 0.75 sample each); a real L/R skew of a sample or more still fails.
+    static constexpr double kStereoSkewMax = 0.5;
+    // The common whole-sample latency of a stereo pair, or -1 when the channels are a different loop (ChannelAsymmetry).
+    static int32_t stereoLag(int32_t lagL, double posL, int32_t lagR, double posR) noexcept;
 
     struct Progress { int attempt; int probeIndex; float levelDb; int64_t msElapsed; };   // probeIndex 0 = level probe
 
@@ -68,6 +74,10 @@ public:
     Measurer(ProbeIo& io, CorrelationWorker& worker, const engine::ProbeGenerator& probe, std::function<int64_t()> nowMs,
              int attempts = kAttempts);
 
+    // Message thread, between measurements: the drain/settle times follow the device rate.
+    void setSampleRate(int fs) noexcept;
+    static int64_t drainMsAt(const engine::ProbeGenerator& probe, int fs) noexcept;
+    int64_t drainMs() const noexcept { return drainMs_; }
     void start(uint32_t generation, const engine::LevelHistory& history, bool stereo, int hwBlock);
     void abortForRecording() { cancel(engine::Reason::Recording); }
     void cancel(engine::Reason why);
@@ -101,7 +111,7 @@ private:
     std::function<int64_t()> now_;
     const int32_t len_;
     const int attempts_;
-    const int64_t drainMs_;
+    int64_t drainMs_;
     float sweepRmsDb_ = 0.0f;   // probe RMS over the sweep at 0 dBFS peak
     std::vector<float> probeBuf_, capL_, capR_;
 

@@ -1,6 +1,8 @@
 // ViewModel (plan Task 25, F1 §12): everything the editor shows, derived from plain inputs the processor snapshots on the
 // message thread. Colours are ARGB (the editor wraps them in juce::Colour). No coordination state lives here.
 #pragma once
+#include <cstdlib>
+#include <cctype>
 #include <cstdint>
 #include <cstdio>
 #include <ctime>
@@ -45,7 +47,7 @@ inline std::string reasonText(engine::Reason r)
         case R::Timeout: return "The probe timed out";
         case R::PdcNotObserved: return "REAPER did not apply the new latency in time";
         case R::AnticipativeOn: return "Anticipative FX processing is on for this track";
-        case R::SampleRate: return "Only 48 kHz is supported";
+        case R::SampleRate: return "Unsupported rate (44.1/48/88.2/96/192 kHz)";
         case R::DefaultDevice: return "Select a specific audio device, not <default>";
         case R::PairConflict: return "Another instance uses this device";
         case R::Recording: return "Measurement paused while recording";
@@ -58,6 +60,7 @@ inline std::string reasonText(engine::Reason r)
 #else
         case R::DriverUnsupported: return "REAPER's audio driver is not supported. NovaInsert needs ASIO on Windows / ALSA on Linux";
 #endif
+        case R::SampleRateChange: return "Sample rate changed";
         case R::ChannelNotDelivered: return "REAPER delivers no audio on this preset's channel. Enable it in Preferences > Audio > Device (input/output range)";
     }
     return "Unknown reason";
@@ -66,14 +69,17 @@ inline std::string reasonText(engine::Reason r)
 // F1 §15: REAPER 7.83 is the validated host; any other version runs, labelled, until its matrix passes. Empty = unknown.
 inline bool hostVersionValidated(const std::string& v)
 {
-    if (v.empty()) return true;
-    // 7.83: F0..F5; 7.85: the Apollo gate of 2026-11-06 (measure on open, open fallback, render exact, library faults)
-    for (const char* validated : {"7.83", "7.85"})
-    {
-        const std::string k = validated;
-        if (v.compare(0, k.size(), k) == 0 && (v.size() == k.size() || v[k.size()] == '/')) return true;
-    }
-    return false;
+    // Only a REAPER older than 7.6 is marked (user 2026-11-14); every 7.6 or newer counts as fine. GetAppVersion reads
+    // e.g. "7.84/x64" or "7.83/macOS-arm64": the number before the first non-digit, non-dot character decides; REAPER's
+    // minor version is a decimal fraction (7.6 == 7.60 < 7.84). Unknown or unparsable: no label.
+    size_t e = 0;
+    while (e < v.size() && (std::isdigit(static_cast<unsigned char>(v[e])) || v[e] == '.')) ++e;
+    if (e == 0) return true;
+    char* end = nullptr;
+    const std::string num = v.substr(0, e);
+    const double x = std::strtod(num.c_str(), &end);
+    if (end == num.c_str()) return true;
+    return x >= 7.6 - 1e-9;
 }
 
 // The "Interface" line of PRESET SETUP and SETUP: the audio device as REAPER reports it (GetAudioDeviceInfo IDENT_IN /
@@ -105,7 +111,7 @@ struct ViewInputs
     int32_t physLoop = -1, reportedPdc = -1;   // -1 = not measured
     int32_t driverIn = -1, driverOut = -1;     // GetInputOutputLatency (REFERENCE only)
     int32_t gapSamples = 0;                    // inherent start gap of a render
-    int32_t sampleRate = engine::kSampleRate;
+    int32_t sampleRate = engine::kDefaultSampleRate;   // the device rate the loop runs at (samples → ms)
     int64_t timestampUnix = 0;
     bool preRollLeadIn = false;
     std::vector<std::string> anticipativeViolationTracks;
@@ -145,7 +151,7 @@ struct ViewModel
     std::vector<std::string> warnings;
     std::string failureReason;
     bool showReapplyAnticipative = false, showLeadInHint = false;
-    bool recalibrateEnabled = false;   // RE-CALIBRATION: only after a failed calibration (Failed, or the open check fell back) — user 2026-11-06
+    bool recalibrateEnabled = false;   // RE-CALIBRATION: only after a failed calibration (Failed, or the open check fell back) – user 2026-11-06
     // Level CAL / VU
     std::string calText;
     bool calError = false;
@@ -159,7 +165,7 @@ struct ViewModel
     {
         switch (s)
         {
-            case 1: return "SEND CAL: play the track \u2014 3 s of it set to 0 VU = +4 dBu (press again to cancel)";
+            case 1: return "SEND CAL: play the track \u2013 3 s of it set to 0 VU = +4 dBu (press again to cancel)";
             case 2: case 3: return "Measuring return\u2026";
             case 4: return "Calibrated";
             case 5: return "CAL needs Insert mode";
@@ -169,7 +175,7 @@ struct ViewModel
             case 9: return "Return clipped: lower the outboard output";
             case 10: return "No return signal: check the outboard and cabling";
             case 11: return "Loop gain outside the trim range";
-            case 12: return "SEND CAL: no track signal within 30 s \u2014 start playback, then press CAL";
+            case 12: return "SEND CAL: no track signal within 30 s \u2013 start playback, then press CAL";
             case 13: return "SEND CAL: the track is too quiet or too loud for the trim range";
             default: return {};
         }
@@ -186,7 +192,7 @@ struct ViewModel
     static constexpr float kFloorDb = -120.0f;
     static std::string dbuText(float rmsDbfs, float dbuAt0dBFS)
     {
-        return rmsDbfs <= kFloorDb ? "\u2014" : signedText(rmsDbfs + dbuAt0dBFS, 1) + " dBu";
+        return rmsDbfs <= kFloorDb ? "\u2013" : signedText(rmsDbfs + dbuAt0dBFS, 1) + " dBu";
     }
     // DEVICES page channel picker text: "3 · Apollo Out 3" (1-based index, host name when known)
     static std::string channelLabel(int index0, const std::string& name)
@@ -194,12 +200,12 @@ struct ViewModel
         const std::string n = std::to_string(index0 + 1);
         return name.empty() ? n : n + " \u00b7 " + name;
     }
-    static std::string dbfsText(float dbfs) { return dbfs <= kFloorDb ? "\u2014" : signedText(dbfs, 1) + " dBFS"; }
+    static std::string dbfsText(float dbfs) { return dbfs <= kFloorDb ? "\u2013" : signedText(dbfs, 1) + " dBFS"; }
     static std::string levelText(float dbfs, bool dbu, float dbuAt0dBFS) { return dbu ? dbuText(dbfs, dbuAt0dBFS) : dbfsText(dbfs); }
 
     static std::string samplesText(int32_t smp, int32_t fs)
     {
-        if (smp < 0 || fs <= 0) return "—";
+        if (smp < 0 || fs <= 0) return "–";
         char b[64];
         std::snprintf(b, sizeof b, "%d smp · %.2f ms", smp, 1000.0 * smp / fs);
         return b;
@@ -231,7 +237,7 @@ struct ViewModel
         vm.physLoopText = samplesText(in.physLoop, in.sampleRate);
         vm.pdcText = samplesText(in.reportedPdc, in.sampleRate);
         vm.driverText = in.driverIn < 0 || in.driverOut < 0
-                            ? "—"
+                            ? "–"
                             : samplesText(in.driverIn + in.driverOut, in.sampleRate) + " (reference)";
         vm.gapText = in.gapSamples > 0 ? samplesText(in.gapSamples, in.sampleRate) : "none";
         if (in.timestampUnix > 0 && !noDevice)
@@ -256,7 +262,7 @@ struct ViewModel
         if (in.renderLeftAt >= 0) vm.warnings.push_back("Render speed left at " + std::to_string(in.renderLeftAt));
         if (in.staleSnapshot) vm.warnings.push_back("The library record differs from this project's snapshot (kept)");
         if (in.openFallback)
-            vm.warnings.push_back("Open check failed: " + reasonText(in.openFallbackReason) + " \u2014 saved latency in use");
+            vm.warnings.push_back("Open check failed: " + reasonText(in.openFallbackReason) + " \u2013 saved latency in use");
         if (!in.libraryWarning.empty()) vm.warnings.push_back("Device library: " + in.libraryWarning);
         if (!hostVersionValidated(in.hostVersion)) vm.warnings.push_back("Unvalidated host version " + in.hostVersion);
         vm.showReapplyAnticipative = !in.anticipativeViolationTracks.empty();
@@ -275,12 +281,12 @@ struct ViewModel
         vm.sendScaleLabel = "SEND \u00b7 0 VU = " + ref;
         vm.returnScaleLabel = "RETURN \u00b7 0 VU = " + ref;
         for (const auto& d : in.devices)
-            vm.deviceItems.emplace_back(d.inUseBy.empty() ? d.name : d.name + " \u2014 in use: " + d.inUseBy, d.inUseBy.empty());
+            vm.deviceItems.emplace_back(d.inUseBy.empty() ? d.name : d.name + " \u2013 in use: " + d.inUseBy, d.inUseBy.empty());
         if (in.defaultsChanged) vm.noteText = "Device defaults changed";
         // the track is muted while the loop is being measured and until REAPER has taken the new delay: say so
-        if (in.state == engine::State::Measuring)            vm.progressText = "Latency check in progress \u2014 output muted until the loop is locked";
-        else if (in.state == engine::State::Queued)          vm.progressText = "Latency check queued \u2014 output muted until the loop is locked";
-        else if (in.state == engine::State::ApplyingLatency) vm.progressText = "Latency measured \u2014 output muted until REAPER applies the delay (play once)";
+        if (in.state == engine::State::Measuring)            vm.progressText = "Latency check in progress \u2013 output muted until the loop is locked";
+        else if (in.state == engine::State::Queued)          vm.progressText = "Latency check queued \u2013 output muted until the loop is locked";
+        else if (in.state == engine::State::ApplyingLatency) vm.progressText = "Latency measured \u2013 output muted until REAPER applies the delay (play once)";
         vm.recalibrateEnabled = ! noDevice && engine::recalibrationOffered(in.state, in.openFallback);
         return vm;
     }

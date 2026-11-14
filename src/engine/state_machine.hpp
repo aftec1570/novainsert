@@ -1,6 +1,6 @@
 // StateMachine (plan Task 17, F1 §13 + §15): the instance state with an allowed-transition table, the last-known-good rule
 // for Stale (a previous Locked under the same key) and a bounded transition history.
-// Thread contract: apply/setKey/history/lastKnownGoodValid — message thread only. state()/flags()/setFlags() — any thread,
+// Thread contract: apply/setKey/history/lastKnownGoodValid – message thread only. state()/flags()/setFlags() – any thread,
 // lock- and allocation-free (atomics), so processBlock may publish the transport/render flags and read the state.
 #pragma once
 #include <array>

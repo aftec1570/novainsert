@@ -20,7 +20,7 @@ NovaInsertEditor::NovaInsertEditor (NovaInsertProcessor& p) : juce::AudioProcess
     returnTrimAtt_ = std::make_unique<juce::SliderParameterAttachment> (param (P::ReturnTrim), panel_.returnTrim);
     linkAtt_ = std::make_unique<juce::ButtonParameterAttachment> (param (P::Link), panel_.link);
     // LINK: a drag (or wheel / double-click) of one trim moves the other in the same call (MainPanel::linkedUserValue), so the
-    // partner parameter gets its own gesture for the drag's duration — REAPER's touch/latch automation sees both moves.
+    // partner parameter gets its own gesture for the drag's duration – REAPER's touch/latch automation sees both moves.
     for (auto [self, partner] : { std::pair { &panel_.sendTrim, &param (P::ReturnTrim) }, std::pair { &panel_.returnTrim, &param (P::SendTrim) } })
     {
         auto held = std::make_shared<bool> (false);

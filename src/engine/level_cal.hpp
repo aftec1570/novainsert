@@ -6,14 +6,29 @@
 #pragma once
 #include <algorithm>
 #include <cmath>
+#include <cstdint>
 #include <numbers>
 
 namespace ni::engine::cal
 {
-constexpr int kToneFs = 48000;
-constexpr int kTonePeriod = 48;          // 1 kHz at 48 kHz: any multiple of 48 samples loops seamlessly
-constexpr int kSettleSamples = 24000;    // 0.5 s after the tone's arrival
-constexpr int kWindowSamples = 144000;   // 3 s measuring window
+constexpr int kToneHz = 1000;
+constexpr double kSettleSeconds = 0.5;   // after the tone's arrival
+constexpr double kWindowSeconds = 3.0;   // measuring window, shortened at high rates to fit the capture (windowSamples)
+
+// The looping tone: 100 ms = exactly 100 cycles of 1 kHz at every supported rate (4410 … 19200 samples), so it loops seamlessly.
+constexpr int toneLoopSamples(int fs) noexcept { return fs / 10; }
+constexpr int kMaxToneLoopSamples = 192000 / 10;
+constexpr int settleSamples(int fs) noexcept { return static_cast<int>(kSettleSeconds * fs); }
+// 3 s, or less when L_max + settle + 3 s would not fit captureCap samples; always whole tone loops (exact-cycle RMS).
+// 44.1 kHz 3.0 s, 48 kHz 3.0 s, 88.2 kHz 1.7 s, 96 kHz 1.5 s, 192 kHz 0.5 s with the engine's 262 144-sample capture.
+constexpr int windowSamples(int fs, int32_t lMax, int captureCap) noexcept
+{
+    const int loop = toneLoopSamples(fs) > 0 ? toneLoopSamples(fs) : 1;
+    const int want = static_cast<int>(kWindowSeconds * fs);
+    const int room = captureCap - static_cast<int>(lMax) - settleSamples(fs);
+    const int w = (want < room ? want : room) / loop * loop;
+    return w > 0 ? w : 0;
+}
 constexpr float kClipDbfs = -0.1f;       // parent §7 clip rule: sample peak ≥ −0.1 dBFS
 constexpr float kNoSignalBelowDb = 40.0f;
 constexpr float kAes17Db = 3.0103f;      // AES17: a sine's level = its peak = plain RMS + 3.01 dB
@@ -51,13 +66,18 @@ inline float linkLimit(float attempted, float self, float other, bool link, floa
     return mn > mx ? self : std::clamp(attempted, mn, mx);
 }
 
-// The reference tone at an AES17 level: a sine whose peak is levelDbfs (a −20 dBFS tone peaks at −20 dBFS and leaves a
-// +24 dBu-aligned converter at +4 dBu). Its plain RMS is 3.01 dB lower.
-inline void makeTone(float* dst, int n, float levelDbfs) noexcept
+// The reference tone at an AES17 level: a 1 kHz sine at rate fs whose peak is levelDbfs (a −20 dBFS tone peaks at −20 dBFS and
+// leaves a +24 dBu-aligned converter at +4 dBu). Its plain RMS is 3.01 dB lower. The phase is taken modulo one second in whole
+// samples, so a run of toneLoopSamples(fs) loops seamlessly.
+inline void makeTone(float* dst, int n, float levelDbfs, int fs) noexcept
 {
     const double a = std::pow(10.0, levelDbfs / 20.0);
+    const int64_t f = fs > 0 ? fs : 1;
     for (int i = 0; i < n; ++i)
-        dst[i] = static_cast<float>(a * std::sin(2.0 * std::numbers::pi * static_cast<double>(i % kTonePeriod) / kTonePeriod));
+    {
+        const int64_t ph = (static_cast<int64_t>(i) * kToneHz) % f;
+        dst[i] = static_cast<float>(a * std::sin(2.0 * std::numbers::pi * static_cast<double>(ph) / static_cast<double>(f)));
+    }
 }
 
 struct LoopGain

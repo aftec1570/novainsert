@@ -5,6 +5,7 @@
 #include <cmath>
 #include <vector>
 #include "engine/level_cal.hpp"
+#include "engine/types.hpp"
 
 using namespace ni::engine;
 using Catch::Matchers::WithinAbs;
@@ -65,7 +66,7 @@ TEST_CASE("level_cal_tone")
     // AES17 (user 2026-11-05 "set it to hit the HW unit at exactly +4 dBu"): a −20 dBFS tone peaks at −20 dBFS, so on a converter
     // aligned to +24 dBu at 0 dBFS (full-scale sine) it leaves at exactly +4 dBu. Its plain RMS is 3.01 dB lower.
     std::vector<float> t(4800);
-    cal::makeTone(t.data(), 4800, -20.0f);
+    cal::makeTone(t.data(), 4800, -20.0f, 48000);
     float pk = 0.0f;
     for (float x : t) pk = std::max(pk, std::fabs(x));
     CHECK_THAT(20.0f * std::log10(pk), WithinAbs(-20.0, 0.01));
@@ -77,13 +78,13 @@ TEST_CASE("level_cal_tone")
 
 TEST_CASE("level_cal_measure_loop_gain")
 {
-    const int delay = 300, n = delay + cal::kSettleSamples + cal::kWindowSamples;
+    const int delay = 300, n = delay + cal::settleSamples(48000) + cal::windowSamples(48000, ni::engine::kLMax, 4 * ni::engine::kLMax);
     std::vector<float> tone(4800), l(static_cast<size_t>(n), 0.0f), r(static_cast<size_t>(n), 0.0f);
-    cal::makeTone(tone.data(), 4800, -20.0f);
+    cal::makeTone(tone.data(), 4800, -20.0f, 48000);
     const float gl = std::pow(10.0f, -1.5f / 20), gr = std::pow(10.0f, 0.7f / 20);
     for (int i = delay; i < n; ++i) { l[size_t(i)] = tone[size_t((i - delay) % 4800)] * gl; r[size_t(i)] = tone[size_t((i - delay) % 4800)] * gr; }
     const float sent[2] = { -20.0f, -20.0f };
-    auto g = cal::measureLoopGain(l.data(), r.data(), n, delay + cal::kSettleSamples, cal::kWindowSamples, sent, true);
+    auto g = cal::measureLoopGain(l.data(), r.data(), n, delay + cal::settleSamples(48000), cal::windowSamples(48000, ni::engine::kLMax, 4 * ni::engine::kLMax), sent, true);
     CHECK_THAT(g.gainDb[0], WithinAbs(-1.5, 0.05));
     CHECK_THAT(g.gainDb[1], WithinAbs(0.7, 0.05));
     CHECK_FALSE(g.clipped);
@@ -91,18 +92,18 @@ TEST_CASE("level_cal_measure_loop_gain")
 
     SECTION("a sample at 0.99 in the window clips")
     {
-        l[size_t(delay + cal::kSettleSamples + 1000)] = 0.99f;
-        CHECK(cal::measureLoopGain(l.data(), r.data(), n, delay + cal::kSettleSamples, cal::kWindowSamples, sent, true).clipped);
+        l[size_t(delay + cal::settleSamples(48000) + 1000)] = 0.99f;
+        CHECK(cal::measureLoopGain(l.data(), r.data(), n, delay + cal::settleSamples(48000), cal::windowSamples(48000, ni::engine::kLMax, 4 * ni::engine::kLMax), sent, true).clipped);
     }
     SECTION("silence is no signal")
     {
         std::fill(l.begin(), l.end(), 0.0f); std::fill(r.begin(), r.end(), 0.0f);
-        CHECK(cal::measureLoopGain(l.data(), r.data(), n, delay + cal::kSettleSamples, cal::kWindowSamples, sent, true).noSignal);
+        CHECK(cal::measureLoopGain(l.data(), r.data(), n, delay + cal::settleSamples(48000), cal::windowSamples(48000, ni::engine::kLMax, 4 * ni::engine::kLMax), sent, true).noSignal);
     }
     SECTION("mono measures L only")
     {
         std::fill(r.begin(), r.end(), 0.0f);
-        auto m = cal::measureLoopGain(l.data(), r.data(), n, delay + cal::kSettleSamples, cal::kWindowSamples, sent, false);
+        auto m = cal::measureLoopGain(l.data(), r.data(), n, delay + cal::settleSamples(48000), cal::windowSamples(48000, ni::engine::kLMax, 4 * ni::engine::kLMax), sent, false);
         CHECK_THAT(m.gainDb[0], WithinAbs(-1.5, 0.05));
         CHECK(m.gainDb[1] == 0.0f);
         CHECK_FALSE(m.noSignal);
@@ -117,7 +118,7 @@ TEST_CASE("level_cal_link_ignores_normalisation_round_off")
     CHECK_THAT(r.returnDb, WithinAbs(-3.001, 1e-5));
 }
 
-// User 2026-11-06: "With the link enabled turning the input down made the input knob glitch on low settings" — the knob was
+// User 2026-11-06: "With the link enabled turning the input down made the input knob glitch on low settings" – the knob was
 // dragged past the point where the other trim hits its range edge, then pulled back by LINK every timer tick (and the audio
 // briefly ran at the over-dragged gain). The knob itself must stop where LINK stops.
 TEST_CASE("level_cal_link_limit_stops_the_dragged_trim_where_the_other_hits_its_edge")

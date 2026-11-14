@@ -1,4 +1,4 @@
-// PairRegistry — process-wide ownership of physical send/return channel pairs (F1 §1/§6, plan Task 7).
+// PairRegistry – process-wide ownership of physical send/return channel pairs (F1 §1/§6, plan Task 7).
 // Message thread only. First-come ownership; any shared physical channel (out or in) with an owner is a
 // conflict; conflicting claimants wait in FIFO order and the oldest is promoted when the owner releases.
 #pragma once

@@ -1,4 +1,4 @@
-// NovaInsertProcessor — the VST3 instance (F1 §1 Instance): host bridge (REAPER API via IReaperHostApplication), parameter
+// NovaInsertProcessor – the VST3 instance (F1 §1 Instance): host bridge (REAPER API via IReaperHostApplication), parameter
 // model, state machine, device library + routing, Measurer / CAL / LINK services, PDC reporting, render preflight view,
 // persistence (state blob), diagnostics, non-realtime/offline behaviour. Message-thread timer order: see timerCallback().
 #pragma once
@@ -79,7 +79,7 @@ public:
     void setOffsets (std::array<float, 2> send, std::array<float, 2> ret);
     ni::plugin::CalStatus calStatus() const { return cal_ ? cal_->status() : ni::plugin::CalStatus::Idle; }
     // DEVICES page (spec 2026-11-05; message thread): presets edited in the editor. Nothing about latency is stored with a
-    // preset — saving or selecting one claims its channels and measures at once.
+    // preset – saving or selecting one claims its channels and measures at once.
     std::string saveDevice (ni::plugin::DeviceRecord r);      // validate → write → select (re-claim when the running one changed); "" = ok
     std::string deleteDevice (const std::string& id);         // refused while another instance uses it; "" = ok
     void pollLibrary();                                       // ≤ 1 Hz from the editor: devices.json re-read, host channel names
@@ -160,6 +160,10 @@ private:
     bool everOpen_ = false;
     bool lastOpen_ = false;
     int lastBufferSize_ = 0;
+    bool rateRemeasure_ = false;       // a rate change seen, its re-measure not yet requested
+    int lastSampleRate_ = 0;           // device SRATE at the last poll (0 = none yet): a change re-measures (SampleRateChange)
+    int deviceFs_ = ni::engine::kDefaultSampleRate;   // supported device rate the loop, meters, CAL and readouts run at
+    void applySampleRate (int fs);
     std::string lastIdent_;
     std::string identIn_, identOut_;   // current host device identity (CalibKey, Task 22/23)
     // Driver gate (1.1.0 port): MODE as REAPER reports it, the allowAnyDriver override, and the once/on-change log state

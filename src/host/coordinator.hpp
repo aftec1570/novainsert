@@ -1,4 +1,4 @@
-// Coordinator — process-wide singleton shared by every NovaInsert instance (F1 §1, plan Task 6).
+// Coordinator – process-wide singleton shared by every NovaInsert instance (F1 §1, plan Task 6).
 //   acquire(): first caller constructs it and installs the single hardware hook; the last shared_ptr release
 //   uninstalls the hook and destroys it. One shared_ptr per instance; construction/destruction on the message
 //   thread only; a std::mutex guards acquire (never called from RT).

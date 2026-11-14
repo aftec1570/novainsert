@@ -1,4 +1,4 @@
-// MainPanel (VU GUI spec 2026-11-02 §4, mockup v5): the whole editor body at the base size 780 × 560 — top bar (green LCD
+// MainPanel (VU GUI spec 2026-11-02 §4, mockup v5): the whole editor body at the base size 780 × 560 – top bar (green LCD
 // device list + status lamp), SEND and RETURN VU meters, control strips (trims, CAL buttons, readouts, PEAK/CLIP LEDs, LINK),
 // bottom row (MODE, SEND/RETURN selectors, ⚙ SETUP), status lines, and the SETUP overlay. JUCE-only and independent of the
 // processor so tools/gui_snapshot can render it; the editor wires the controls to parameters and the callbacks to the
@@ -15,7 +15,7 @@
 
 namespace ni::gui
 {
-// A trim knob: 0.1 dB steps; every user value (drag, wheel, double-click — snapValue is only called for user input) goes
+// A trim knob: 0.1 dB steps; every user value (drag, wheel, double-click – snapValue is only called for user input) goes
 // through onUser, which with LINK on stops the knob where the other trim hits its range edge and moves the other trim in the
 // same call. The knob is never pulled back after the fact (user 2026-11-06: "with the link enabled turning the input down
 // made the input knob glitch on low settings"), and the processor sees both trims move together, so it does not re-link.

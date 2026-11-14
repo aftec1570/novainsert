@@ -32,6 +32,8 @@ using ni::engine::State;
 using ni::plugin::Param;
 namespace P = ni::plugin;
 
+static_assert (ni::plugin::CalController::kCaptureCap == ni::engine::SlotLoopEngine::kCaptureCap);
+
 namespace
 {
 std::atomic<int> g_instanceCounter { 0 };
@@ -104,9 +106,10 @@ NovaInsertProcessor::NovaInsertProcessor()
         jassert (q != nullptr && q->getParameterID() == id (static_cast<Param> (i)));
         jassert (q->isAutomatable() == P::kParamAutomatable[static_cast<std::size_t> (i)]);
     }
-    // meters are fed by the hook (device thread) from the first configure on; only 48 kHz runs (F1), so prepared once here
-    sendMeter_.prepare (ni::engine::kSampleRate);
-    returnMeter_.prepare (ni::engine::kSampleRate);
+    // meters are fed by the hook (device thread) from the first configure on: prepared once at the default rate here, then
+    // retuned by applySampleRate when the device reports its rate (RT-safe, taken over by the next feed)
+    sendMeter_.prepare (ni::engine::kDefaultSampleRate);
+    returnMeter_.prepare (ni::engine::kDefaultSampleRate);
     pDevice->addListener (this);
     startTimer (20);   // Measurer tick (F1 §7 timeouts); host polling runs every 25th tick (500 ms)
 }
@@ -210,6 +213,7 @@ void NovaInsertProcessor::setIHostApplication (Steinberg::FUnknown* host)
     measurer_->programLive = [this] { return playingNow(); };   // the send carries program while playing: silence + drain first
     calPort_ = std::make_unique<EngineCalPort> (*this);
     cal_ = std::make_unique<ni::plugin::CalController> (*calPort_);
+    applySampleRate (deviceFs_);   // the device rate may already be known (a re-init after a failed API probe)
     const bool hook = coord_->hooks().installed();
     ni::host::DiagLog::get().text ("INIT", instNo_, "api=ok|hook=%d|instances=%d|reaper=%s", hook ? 1 : 0,
                                    coord_->instanceCount(), api.GetAppVersion ? api.GetAppVersion() : "?");
@@ -340,7 +344,7 @@ void NovaInsertProcessor::applyDeviceParameter()
         if (state() == State::Unavailable || ! undeliveredChannel().empty()) evaluateHostState();
         // a restore measures now; a user selection measures on the tick that applies the preset's defaults (its mode is part of
         // the key: requesting first and switching mode after would cancel and requeue, and an Effect preset chosen from Insert
-        // would briefly hold an Insert probe request — final review M2)
+        // would briefly hold an Insert probe request – final review M2)
         if (restore) requestMeasure (Reason::ProjectLoad);
         else measureAfterDefaults_ = first ? Reason::ProjectLoad : Reason::DeviceSelection;
     }
@@ -437,10 +441,16 @@ void NovaInsertProcessor::evaluateHostState (Reason trigger)
     const bool wasOpen = lastOpen_; lastOpen_ = key.open;
     if (! key.open) { setState (State::Unavailable, Reason::DeviceLost); return; }        // device closed / not opened yet
     Reason pending = Reason::None;   // device key transition seen by polling (Audio_Quit/Audio_Init, BSIZE or device change)
-    if (! wasOpen && everOpen_) pending = Reason::DeviceReopen;
+    // A rate change re-measures automatically (user 2026-11-14): the loop latency in samples no longer holds. REAPER reopens the
+    // device for a rate change; the poll may or may not see it closed, so the rate itself is compared.
+    const bool rateChanged = lastSampleRate_ > 0 && key.sampleRate > 0 && key.sampleRate != lastSampleRate_;
+    if (key.sampleRate > 0) lastSampleRate_ = key.sampleRate;
+    if (rateChanged) rateRemeasure_ = true;   // sticky: a transient gate (prepare lagging the device) must not lose it
+    if (rateChanged) pending = Reason::SampleRateChange;
+    else if (! wasOpen && everOpen_) pending = Reason::DeviceReopen;
     else if (wasOpen && lastBufferSize_ > 0 && key.bufferSize != lastBufferSize_) pending = Reason::BufferChange;
     else if (wasOpen && ! lastIdent_.empty() && lastIdent_ != key.identIn + "|" + key.identOut) pending = Reason::IoChange;
-    if (pending == Reason::DeviceReopen || pending == Reason::IoChange) coord_->hooks().resetDelivered();   // the old device's map no longer applies
+    if (pending == Reason::DeviceReopen || pending == Reason::IoChange || pending == Reason::SampleRateChange) coord_->hooks().resetDelivered();   // the old device's map no longer applies
     everOpen_ = true; lastBufferSize_ = key.bufferSize; lastIdent_ = key.identIn + "|" + key.identOut;
     identIn_ = key.identIn; identOut_ = key.identOut;
     // the driver gate runs before the default-device and hook checks: an unsupported driver (WASAPI, ASIO4ALL, FlexASIO, ...)
@@ -475,12 +485,13 @@ void NovaInsertProcessor::evaluateHostState (Reason trigger)
     if (key.isDefault) { setState (State::Unavailable, Reason::DefaultDevice); return; }
     const double prepared = preparedSampleRate_.load (std::memory_order_acquire);
     const int sr = key.sampleRate > 0 ? key.sampleRate : static_cast<int> (prepared);
-    if (sr != ni::engine::kSampleRate || (prepared > 0.0 && static_cast<int> (prepared) != ni::engine::kSampleRate))
+    if (! ni::engine::isSupportedSampleRate (sr) || (prepared > 0.0 && static_cast<int> (prepared) != sr))
     { setState (State::UnsupportedSampleRate, Reason::SampleRate); return; }
+    if (sr != deviceFs_) applySampleRate (sr);
     if (! coord_->hooks().installed()) { setState (State::Unavailable, Reason::DeviceLost); return; }
     // The hook is the authority on buffers: a device the key reports open but that delivers no buffers stays
     // Unavailable until DeviceReturned (F1 §5/§15); the poll must not override the hook's DeviceLost.
-    // the hook's debounced verdict, or a null run that stopped calling back (S6 review I2) — not a raw streak (Task 21)
+    // the hook's debounced verdict, or a null run that stopped calling back (S6 review I2) – not a raw streak (Task 21)
     if (coord_->hooks().deviceLostNow()) { setState (State::Unavailable, Reason::DeviceLost); return; }
     if (state() == State::Unavailable && lastReason_ == Reason::DeviceLost && trigger == Reason::None) trigger = Reason::DeviceReturned;
     if (antViolation_) { setState (State::UnsupportedHost, Reason::AnticipativeOn); return; }
@@ -500,7 +511,25 @@ void NovaInsertProcessor::evaluateHostState (Reason trigger)
     if (state() == State::UnsupportedHost || state() == State::Unavailable || state() == State::UnsupportedSampleRate)
         setState (State::Idle, Reason::None);
     // host usable again: labelled by what made it so; a recording abort waits for the record path (reason Recording)
-    if (const Reason r = ni::engine::hostPollRequeue (state(), pending, trigger, requeueAfterRecord_, measureAfterDefaults_.has_value()); r != Reason::None) requestMeasure (r);
+    if (rateRemeasure_ && (pending == Reason::None || pending == Reason::DeviceReopen)) pending = Reason::SampleRateChange;
+    if (const Reason r = ni::engine::hostPollRequeue (state(), pending, trigger, requeueAfterRecord_, measureAfterDefaults_.has_value()); r != Reason::None)
+    {
+        if (r == Reason::SampleRateChange) rateRemeasure_ = false;
+        requestMeasure (r);
+    }
+}
+
+// Message thread: every rate-dependent part follows the device rate (rate-independence 2026-11-14). The meters and the slot
+// loop take it over on their RT thread; the measurer and the PDC observer between measurements.
+void NovaInsertProcessor::applySampleRate (int fs)
+{
+    if (fs != deviceFs_) ni::host::DiagLog::get().text ("RATE", instNo_, "from=%d|to=%d", deviceFs_, fs);
+    deviceFs_ = fs;
+    sendMeter_.setSampleRate (fs);
+    returnMeter_.setSampleRate (fs);
+    if (inst_) inst_->engine().setSampleRate (fs);
+    if (measurer_) measurer_->setSampleRate (fs);
+    if (pdc_) pdc_->setSampleRate (fs);
 }
 
 std::string NovaInsertProcessor::undeliveredChannel() const
@@ -890,7 +919,7 @@ std::optional<ni::engine::CalibKey> NovaInsertProcessor::currentKey() const
         if (rec->out[c] >= 0 && api.GetOutputChannelName) if (const char* n = api.GetOutputChannelName (rec->out[c])) names.send[c] = n;
         if (rec->in[c] >= 0 && api.GetInputChannelName) if (const char* n = api.GetInputChannelName (rec->in[c])) names.ret[c] = n;
     }
-    return ni::plugin::calibKeyFor (*rec, identIn_, identOut_, ni::engine::kSampleRate, loopCfg_.B,
+    return ni::plugin::calibKeyFor (*rec, identIn_, identOut_, deviceFs_, loopCfg_.B,
                                     pMode->getIndex() == 1 ? ni::engine::Mode::Effect : ni::engine::Mode::Insert,
                                     sendSide(), returnSide(), names);
 }
@@ -972,7 +1001,7 @@ ni::gui::ViewInputs NovaInsertProcessor::viewInputs() const
     if (const auto bar = lastIdent_.find ('|'); bar != std::string::npos) in.interfaceOutName = lastIdent_.substr (bar + 1);
     const auto eff = effectivePair();
     auto chans = [&] (const char* what, const int* c, bool stereo) {
-        if (c[0] < 0) return std::string ("\u2014");
+        if (c[0] < 0) return std::string ("\u2013");
         return std::string (what) + " " + std::to_string (c[0] + 1) + (stereo && c[1] >= 0 ? "/" + std::to_string (c[1] + 1) : "");
     };
     in.outName = chans ("Out", eff.out, eff.sendStereo);
@@ -990,6 +1019,7 @@ ni::gui::ViewInputs NovaInsertProcessor::viewInputs() const
     if (coord_ && coord_->api().GetInputOutputLatency) coord_->api().GetInputOutputLatency (&in.driverIn, &in.driverOut);
     in.gapSamples = pInherentGap->get();
     in.timestampUnix = lastMeasuredUnix_;
+    in.sampleRate = deviceFs_;
     in.preRollLeadIn = pPreRoll->get();
     if (antViolation_)
     {
@@ -1237,6 +1267,7 @@ void NovaInsertProcessor::setPlain (juce::RangedAudioParameter* p, float v)
 ni::plugin::CalContext NovaInsertProcessor::calContext() const
 {
     ni::plugin::CalContext c;
+    c.sampleRate = deviceFs_;
     c.effectMode = pMode->getIndex() == 1;
     c.recording = apiOk_ && coord_ && recordingNow();
     c.pairOwned = pairOwned_ && inst_ && inst_->active() && loopCfg_.B > 0;

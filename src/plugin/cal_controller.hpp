@@ -1,12 +1,13 @@
 // Level CAL controller (VU GUI spec 2026-11-02 §2/§7). Message thread only; JUCE-free. Drives the reference tone through a
 // CalPort (the instance's looping, send-trimmed latency-probe path) and turns what comes back into trim writes:
-//   SEND CAL:   (user 2026-11-06) measures the track's own program on the send meter — no tone, no mute — until 3 s of signal
+//   SEND CAL:   (user 2026-11-06) measures the track's own program on the send meter – no tone, no mute – until 3 s of signal
 //               were averaged (mean power, AES17), then writes sendTrim so that average leaves the converter at 0 VU = +4 dBu:
 //               sendTrim = (4 − sendDbuAt0dBFS) − (program level before the trim). Second press cancels; 30 s without program →
 //               NoProgram. With LINK on the processor moves the return by the opposite amount.
 //   RETURN CAL: waits physLoop + 0.5 s settle + 3 s window of capture, measures the loop gain per channel and writes the ganged
 //               return trim = the mean of the per-channel unity trims and the offsets = their difference to it.
 #pragma once
+#include "engine/types.hpp"
 #include <array>
 #include <optional>
 #include <vector>
@@ -35,6 +36,7 @@ struct CalContext
     float vuRefDbfs = -20.0f, sendDbuAt0dBFS = 24.0f, sendTrimDb = 0.0f, returnTrimDb = 0.0f;
     float sendOffsetDb[2] { 0.0f, 0.0f }, returnOffsetDb[2] { 0.0f, 0.0f };
     float sendLevelDbfs[2] { -120.0f, -120.0f };   // the send meter now (AES17 dBFS, after trim and offsets): SEND CAL's input
+    int sampleRate = 48000;                        // device rate: tone, settle and window (RETURN CAL)
 };
 
 struct CalWrite
@@ -50,7 +52,8 @@ public:
     static constexpr double kSendMaxSeconds = 30.0;     // SEND CAL: no 3 s of program within this → NoProgram
     static constexpr float kProgramGateDbfs = -60.0f;   // a tick counts when the louder channel before the trim is above this
     static constexpr double kReturnSlackSeconds = 10.0;   // beyond the loop + settle + window time before "no return"
-    static constexpr int kToneSamples = 4800;
+    // The engine's capture limit bounds L_max + settle + window (level_cal.hpp windowSamples).
+    static constexpr int kCaptureCap = 4 * engine::kLMax;   // == SlotLoopEngine::kCaptureCap (checked in processor.cpp)
 
     explicit CalController(CalPort& port);
     CalStatus pressSend(const CalContext& c);
@@ -75,6 +78,7 @@ private:
     double progSeconds_ = 0.0, progPow_[2] { 0.0, 0.0 };
     std::optional<double> lastTick_;
     int need_ = 0;
+    int fs_ = 48000, window_ = 0;   // rate and window of the running RETURN CAL
 };
 
 static_assert(static_cast<int>(CalStatus::ProgramOutOfRange) == 13, "CalStatus must match P::kCalStatusMax");

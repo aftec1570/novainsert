@@ -1,5 +1,5 @@
 // DEVICES page (spec docs/superpowers/specs/2026-11-05-novainsert-device-editor-design.md): the preset list and the form that
-// edits one device record — name, send width + output channel(s), return width + input channel(s) (mono/stereo routing design
+// edits one device record – name, send width + output channel(s), return width + input channel(s) (mono/stereo routing design
 // 2026-11-05: a MONO direction has one channel picker), default mode, converter levels. The form
 // edits a copy; SAVE hands the record to the processor (which validates, writes the library and selects it), DELETE removes
 // it. Callbacks only; no library access here, so tools/gui_snapshot can render it.

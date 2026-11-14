@@ -1,8 +1,8 @@
 // Level-bar meter views (BARS user request 2026-11-05; three selectable looks user 2026-11-06: "All 3 looks cool, make all 3
 // of them selectable"), an alternative to the two VU faces in the same 724 × 205 meter box:
-//   TUBE — one metallic bezel, a backlit cream face, SEND above RETURN, each channel a rounded glass light-pipe;
-//   LED  — the same layout on a smoked-glass face, each channel 60 domed one-dB LED segments;
-//   TWIN — two VU-sized windows (SEND left, RETURN right) with the cream face, tubes and a clip lamp each.
+//   TUBE – one metallic bezel, a backlit cream face, SEND above RETURN, each channel a rounded glass light-pipe;
+//   LED  – the same layout on a smoked-glass face, each channel 60 domed one-dB LED segments;
+//   TWIN – two VU-sized windows (SEND left, RETURN right) with the cream face, tubes and a clip lamp each.
 // Every look shows: the dBu scale above the bars (the group's converter alignment: send D/A, return A/D), the L/R peak with
 // REAPER-like ballistics (instant rise, 24 dB/s fall), the RMS, the engine's 10 s peak hold, the 0 VU reference line, the
 // outboard maximum as a small triangle on the SEND dBu scale, a fixed −60 … 0 dBFS scale below and the PEAK HOLD readouts.

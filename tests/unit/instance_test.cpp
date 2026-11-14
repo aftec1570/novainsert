@@ -1,4 +1,5 @@
-// Instance (plan Task 11): the RT wrapper around SlotLoopEngine — hook channel selection out of REAPER's full hardware channel
+#include <algorithm>
+// Instance (plan Task 11): the RT wrapper around SlotLoopEngine – hook channel selection out of REAPER's full hardware channel
 // arrays, double <-> float conversion, temporary fixed latency (physLoop = 2B, R = 4B), hook client registration.
 // A 32-channel simulated device with an ideal cable from the pair's outputs to its inputs (cross-channel, so a wrong
 // selection or a channel swap cannot pass); host PDC model as in host_sim.hpp (burst R + B at the segment start).
@@ -275,9 +276,12 @@ TEST_CASE("instance_registers_one_hook_client_while_configured")
     Instance inst(hooks);
     REQUIRE(inst.configure(kStereoPair, kStereoRouting, 64));
     REQUIRE(inst.configure(kStereoPair, kStereoRouting, 128));   // reconfigure keeps the one registration
-    int got = 0;
-    while (hooks.registerClient(&dummy) >= 0) ++got;
-    REQUIRE(got == ni::host::HookDispatcher::kMaxClients - 1);
+    // no instance limit (2026-11-14): 199 more clients all get a slot of their own beside the instance
+    std::vector<int> slots;
+    for (int i = 0; i < 199; ++i) { const int s = hooks.registerClient(&dummy); REQUIRE(s >= 0); slots.push_back(s); }
+    REQUIRE(hooks.clientCapacity() >= 200);
+    std::sort(slots.begin(), slots.end());
+    REQUIRE(std::adjacent_find(slots.begin(), slots.end()) == slots.end());
     inst.release();
     REQUIRE(hooks.registerClient(&dummy) >= 0);
 }
@@ -404,8 +408,8 @@ TEST_CASE("instance_apply_measured_replaces_provisional_latency")
     REQUIRE_FALSE(inst.applyMeasured(500));
 }
 
-// Task 19: the instance feeds its HostTransitionObserver from the RT side — processBlock calls while playing (with the hook
-// cycle index) and one onCycle per hook POST (every returned tag == p − R, contiguous) — so the PdcReporter can accept a
+// Task 19: the instance feeds its HostTransitionObserver from the RT side – processBlock calls while playing (with the hook
+// cycle index) and one onCycle per hook POST (every returned tag == p − R, contiguous) – so the PdcReporter can accept a
 // PDC change only after the slot engine saw it settle (F1 §9 Q9).
 TEST_CASE("instance_feeds_the_pdc_observer_until_stable_latency_is_accepted")
 {
@@ -439,7 +443,7 @@ TEST_CASE("instance_pdc_observer_rt_feed_does_not_allocate")
     REQUIRE_NO_ALLOC(rig.run(20));
 }
 
-// Task 21 (F1 §10): the RenderArbiter's "involved" test needs when this instance last ran processBlock — a steady-clock ms
+// Task 21 (F1 §10): the RenderArbiter's "involved" test needs when this instance last ran processBlock – a steady-clock ms
 // stamp written by process() (RT: one clock read + one relaxed store), whether or not the loop is active.
 TEST_CASE("instance_process_stamps_last_processed_ms")
 {

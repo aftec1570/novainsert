@@ -297,7 +297,7 @@ TEST_CASE("project_restore_adopt_takes_converter_and_defaults_from_the_library_r
     pr.loaded(s, 3);
     REQUIRE(pr.claim(3) == ProjectRestore::Claim::Restore);
 
-    // SETUP: converter calibration written to the library (C1) — the restored instance must run it, not the old snapshot
+    // SETUP: converter calibration written to the library (C1) – the restored instance must run it, not the old snapshot
     auto conv = *lib.device("pultec");
     conv.sendDbuAt0dBFS = 20.2f; conv.returnDbuAt0dBFS = 20.2f; conv.vuRefDbfs = -18.0f; conv.outboardMaxInDbu = 22.0f;
     REQUIRE(lib.upsertDevice(conv));
@@ -308,7 +308,7 @@ TEST_CASE("project_restore_adopt_takes_converter_and_defaults_from_the_library_r
     REQUIRE(running->vuRefDbfs == -18.0f);
     REQUIRE(running->outboardMaxInDbu == 22.0f);
 
-    // CAL Done / Apply (I1): trims, LINK, offsets written to the library — the saved snapshot then equals the library
+    // CAL Done / Apply (I1): trims, LINK, offsets written to the library – the saved snapshot then equals the library
     auto cal = *lib.device("pultec");
     cal.sendTrimDb = 3.8f; cal.returnTrimDb = -3.5f; cal.link = true; cal.returnOffsetDb[1] = 0.2f;
     REQUIRE(lib.upsertDevice(cal));
@@ -364,7 +364,7 @@ TEST_CASE("project_restore_adopt_follows_name_and_mode_from_the_library_record")
 
 TEST_CASE("persistence_measure_on_open_probes_and_keeps_the_snapshot_as_fallback")
 {
-    // measure on project open (user 2026-11-06): a matching snapshot no longer locks on its own — the instance measures and keeps
+    // measure on project open (user 2026-11-06): a matching snapshot no longer locks on its own – the instance measures and keeps
     // the snapshot for a final failure; with the setting off the old 0-probe restore stands
     const InstanceState s = sample();
     REQUIRE(restoreAction(s, key(128), true) == RestoreAction::MeasureKeepSnapshot);

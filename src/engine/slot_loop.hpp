@@ -1,4 +1,4 @@
-// NovaInsert engine core — slot-locked hardware loop (F1 §3 "slot-locked loop engine", F0.4 §6/§7; §8 mute; §14 RT; §20
+// NovaInsert engine core – slot-locked hardware loop (F1 §3 "slot-locked loop engine", F0.4 §6/§7; §8 mute; §14 RT; §20
 // routing). Header-only, dependency-free. Ported from the anchoring logic of the F0.4 spike (spikes/f0-render/src/F04Render.cpp,
 // slot-locked branch of processBlock + hook PRE/POST).
 //
@@ -7,7 +7,7 @@
 // segment start:  S0 = firstSlot − p0 − physLoop + R + len − burst  (burst = samples the host pushed before that POST,
 // = R_total + len; for a chain the downstream latencies are absorbed by the burst). POST sends input slot − S0 (older frames
 // dropped, missing → silence); PRE tags returns pos = sendSlot − S0; process() outputs for want = p − R the return with exactly
-// that pos, or zero — and never a return tagged before the segment's start p0 (a hardware loop with memory, e.g. analog
+// that pos, or zero – and never a return tagged before the segment's start p0 (a hardware loop with memory, e.g. analog
 // outboard, keeps ringing with the previous segment's sends: those slots are output as exact 0). The first physLoop samples
 // of every segment (chain: physLoop₁ + Σ downstream R) cannot come back: the inherent gap (LIMITATION, F1 §3), counted in
 // Status::inherentGap and never aligned away. An unprimed segment (REAPER loop
@@ -24,7 +24,7 @@
 //   captureReturn()/capturedCount()   the measurement worker; reads a capture only after the hook published it.
 //   send ring  Spsc<Frame, 2·kLMax>   producer process(), consumer onPost(); overflow → counted (Status::sendOverflows).
 //   return ring Spsc<RFrame, 2·kLMax> producer onPre(), consumer process(); overflow while nobody consumes (transport
-//                                     stopped) is dropped silently — process() flushes the ring at every segment start.
+//                                     stopped) is dropped silently – process() flushes the ring at every segment start.
 //   segment snapshot                  process() → onPost() through a sequence lock (writer: odd while writing).
 // The engine never gates the return on input level: Effect mode passes tails unchanged (F1 §20); Insert mode likewise.
 #pragma once
@@ -77,7 +77,8 @@ private:
 class SlotLoopEngine
 {
 public:
-    static constexpr int32_t kFadeLen = kSampleRate / 200;   // 5 ms raised cosine (F1 §8) = 240 samples at 48 kHz
+    // 5 ms raised cosine (F1 §8): 240 samples at 48 kHz, 221 at 44.1 kHz, 960 at 192 kHz (setSampleRate).
+    static constexpr int32_t fadeLenFor(int fs) noexcept { return std::max(1, (fs + 100) / 200); }
     static constexpr int32_t kCaptureCap = 4 * kLMax;        // return capture per probe: probe + post-silence + L_max
     using SendRing = Spsc<Frame, 2 * static_cast<std::size_t>(kLMax)>;
     using ReturnRing = Spsc<RFrame, 2 * static_cast<std::size_t>(kLMax)>;
@@ -95,15 +96,12 @@ public:
         uint64_t segments;            // cumulative: segments started (play start, seek, loop wrap, latency change)
     };
 
-    SlotLoopEngine() noexcept
-    {
-        for (int32_t i = 0; i <= kFadeLen; ++i)
-        {
-            const double c = std::cos(3.14159265358979323846 * static_cast<double>(i) / kFadeLen);
-            fadeOut_[i] = static_cast<float>(0.5 * (1.0 + c));
-            fadeIn_[i] = static_cast<float>(0.5 * (1.0 - c));
-        }
-    }
+    SlotLoopEngine() noexcept = default;
+
+    // Any thread: the device rate. The fade length follows at the next fade that starts from open or closed (a fade in
+    // progress keeps its length).
+    void setSampleRate(int fs) noexcept { fadeLenReq_.store(fadeLenFor(fs), std::memory_order_release); }
+    int32_t fadeLength() const noexcept { return fadeLenReq_.load(std::memory_order_acquire); }
 
     void prepare(int hwBlock, int32_t lMax = kLMax) noexcept
     {
@@ -156,7 +154,7 @@ public:
     void setMuted(bool m) noexcept { muted_.store(m, std::memory_order_release); }
 
     // Arms (probe != nullptr, n > 0) or disarms the probe. While armed the hardware send carries probe[0..n) from the next
-    // POST, then silence — never the program — and the return is captured from the probe's first slot (captureReturn).
+    // POST, then silence – never the program – and the return is captured from the probe's first slot (captureReturn).
     // loop: probe[0..n) repeats until disarmed (CAL reference tone); applySendGain: each channel is scaled by its effective
     // send gain (the CAL tone leaves the converter as the trimmed program would). The latency probe uses neither.
     void setProbe(const float* probe, int32_t n, bool loop = false, bool applySendGain = false) noexcept
@@ -480,9 +478,24 @@ private:
     {
         const bool m = muted_.load(std::memory_order_acquire);
         if (m && (fadeStage_ == Fade::Open || fadeStage_ == Fade::Opening))
-        { fadeIdx_ = fadeStage_ == Fade::Opening ? kFadeLen - fadeIdx_ : 0; fadeStage_ = Fade::Closing; }
+        {
+            if (fadeStage_ == Fade::Open) { fadeLen_ = fadeLenReq_.load(std::memory_order_acquire); fadeIdx_ = 0; }
+            else fadeIdx_ = fadeLen_ - fadeIdx_;
+            fadeStage_ = Fade::Closing;
+        }
         else if (! m && (fadeStage_ == Fade::Closed || fadeStage_ == Fade::Closing))
-        { fadeIdx_ = fadeStage_ == Fade::Closing ? kFadeLen - fadeIdx_ : 0; fadeStage_ = Fade::Opening; }
+        {
+            if (fadeStage_ == Fade::Closed) { fadeLen_ = fadeLenReq_.load(std::memory_order_acquire); fadeIdx_ = 0; }
+            else fadeIdx_ = fadeLen_ - fadeIdx_;
+            fadeStage_ = Fade::Opening;
+        }
+    }
+
+    // Raised cosine: 0.5 (1 ∓ cos(π i / len)); computed per sample (fades only, ≤ 960 samples at 192 kHz).
+    static float fadeGain(int32_t i, int32_t len, bool in) noexcept
+    {
+        const double c = std::cos(3.14159265358979323846 * static_cast<double>(i) / static_cast<double>(len));
+        return static_cast<float>(in ? 0.5 * (1.0 - c) : 0.5 * (1.0 + c));
     }
 
     void applyFade(float& l, float& r) noexcept
@@ -493,16 +506,16 @@ private:
             case Fade::Closed: l = 0.0f; r = 0.0f; return;
             case Fade::Closing:
             {
-                const float g = fadeOut_[fadeIdx_];
+                const float g = fadeGain(fadeIdx_, fadeLen_, false);
                 l *= g; r *= g;
-                if (++fadeIdx_ >= kFadeLen) fadeStage_ = Fade::Closed;
+                if (++fadeIdx_ >= fadeLen_) fadeStage_ = Fade::Closed;
                 return;
             }
             case Fade::Opening:
             {
-                const float g = fadeIn_[fadeIdx_];
+                const float g = fadeGain(fadeIdx_, fadeLen_, true);
                 l *= g; r *= g;
-                if (++fadeIdx_ >= kFadeLen) fadeStage_ = Fade::Open;
+                if (++fadeIdx_ >= fadeLen_) fadeStage_ = Fade::Open;
                 return;
             }
         }
@@ -526,7 +539,8 @@ private:
     std::unique_ptr<SendRing> send_;
     std::unique_ptr<ReturnRing> ret_;
     std::unique_ptr<float[]> capL_, capR_;
-    float fadeOut_[kFadeLen + 1] {}, fadeIn_[kFadeLen + 1] {};
+    std::atomic<int32_t> fadeLenReq_ { fadeLenFor(kDefaultSampleRate) };
+    int32_t fadeLen_ = fadeLenFor(kDefaultSampleRate);   // RT: length of the fade in progress
 
     // process() thread
     bool lastPlaying_ = false;

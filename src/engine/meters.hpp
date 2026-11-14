@@ -1,13 +1,14 @@
 // MeterEngine (plan Task 24, R-GUI-1 meter part): per channel peak (20 dB/s fall), peak hold (10 s, then the same fall),
 // RMS (50 ms one-pole on x²), VU (300 ms one-pole on x², read relative to the device VU reference), both in AES17 dBFS: a
-// full-scale sine reads 0 dBFS (plain RMS + 3.01 dB) — the convention of converter alignments ("+24 dBu at 0 dBFS") and of the
+// full-scale sine reads 0 dBFS (plain RMS + 3.01 dB) – the convention of converter alignments ("+24 dBu at 0 dBFS") and of the
 // 0 VU references (−20 / −18 dBFS), so dBFS + alignment = dBu at the converter (user 2026-11-05: levels must be right), clip (any sample
 // > 0 dBFS) and near-full-scale (≥ −0.1 dBFS), each latched 2 s; rectified average (10 ms) for the VU needle. Time = samples fed.
 // feed(l, nullptr, n) feeds channel 0 only (mono): channel 1 reads the floor. The optional gains scale what the levels
 // (peak, hold, RMS, VU, rectified) show, so a meter can read after a trim; clip and near-full-scale always judge the raw
 // sample, i.e. the converter (RETURN tap after the return trim, user 2026-11-05).
-// Thread contract: prepare — message thread before feeding; feed — one RT thread, allocation/lock-free; read/resetHold —
-// GUI thread, reads relaxed atomics published once per feed (a reading may mix two consecutive blocks: display only).
+// Thread contract: prepare – message thread before feeding; setSampleRate – any thread, taken over by the next feed (the
+// device rate can change while the hook feeds); feed – one RT thread, allocation/lock-free; read/resetHold – GUI thread,
+// reads relaxed atomics published once per feed (a reading may mix two consecutive blocks: display only).
 #pragma once
 #include <algorithm>
 #include <atomic>
@@ -33,19 +34,21 @@ public:
 
     void prepare (int fs) noexcept
     {
-        fs_ = std::max (1, fs);
-        fall_ = std::pow (10.0f, -1.0f / static_cast<float> (fs_));   // 20 dB/s in amplitude per sample
-        rmsK_ = 1.0f - std::exp (-1.0f / (0.05f * static_cast<float> (fs_)));
-        vuK_ = 1.0f - std::exp (-1.0f / (0.3f * static_cast<float> (fs_)));
-        rectK_ = 1.0f - std::exp (-1.0f / (0.01f * static_cast<float> (fs_)));
+        applyRate (fs);
+        pendingFs_.store (fs_, std::memory_order_relaxed);
         for (Chan& c : ch_) c = Chan {};
         now_ = 0;
         publish();
     }
 
+    // The device rate changed: the next feed recomputes the ballistics (levels and latches keep running).
+    void setSampleRate (int fs) noexcept { pendingFs_.store (std::max (1, fs), std::memory_order_release); }
+    int sampleRate() const noexcept { return pendingFs_.load (std::memory_order_acquire); }
+
     void feed (const float* l, const float* r, int n, float gainL = 1.0f, float gainR = 1.0f) noexcept
     {
         const float gain[2] = { gainL, gainR };
+        if (const int p = pendingFs_.load (std::memory_order_acquire); p != fs_) applyRate (p);
         if (resetHold_.exchange (false, std::memory_order_acq_rel))
             for (Chan& c : ch_) { c.hold = 0.0f; c.holdAt = now_; }
         const float* in[2] = { l, r };
@@ -78,7 +81,7 @@ public:
     {
         Reading r {};
         const int64_t now = now_pub_.load (std::memory_order_acquire);
-        const int64_t latch = 2LL * fs_;
+        const int64_t latch = latchPub_.load (std::memory_order_relaxed);
         for (int k = 0; k < 2; ++k)
         {
             const Pub& p = pub_[k];
@@ -109,6 +112,17 @@ private:
     static constexpr float kAes17Db = 3.0103f;   // 20·log10(√2): mean-square of a full-scale sine is 1/2
     static float powDb (float p) noexcept { return p > 1e-12f ? 10.0f * std::log10 (p) + kAes17Db : kFloorDb; }
 
+    // 20 dB/s fall, 50 ms RMS, 300 ms VU and 10 ms rectifier time constants, a 10 s hold and a 2 s latch, all in seconds.
+    void applyRate (int fs) noexcept
+    {
+        fs_ = std::max (1, fs);
+        fall_ = std::pow (10.0f, -1.0f / static_cast<float> (fs_));   // 20 dB/s in amplitude per sample
+        rmsK_ = 1.0f - std::exp (-1.0f / (0.05f * static_cast<float> (fs_)));
+        vuK_ = 1.0f - std::exp (-1.0f / (0.3f * static_cast<float> (fs_)));
+        rectK_ = 1.0f - std::exp (-1.0f / (0.01f * static_cast<float> (fs_)));
+        latchPub_.store (2LL * fs_, std::memory_order_relaxed);
+    }
+
     void publish() noexcept
     {
         for (int k = 0; k < 2; ++k)
@@ -124,7 +138,9 @@ private:
         now_pub_.store (now_, std::memory_order_release);
     }
 
-    int fs_ = 48000;
+    int fs_ = 48000;                          // feeding thread (prepare before feeding)
+    std::atomic<int> pendingFs_ { 48000 };
+    std::atomic<int64_t> latchPub_ { 2LL * 48000 };
     float fall_ = 1.0f, rmsK_ = 1.0f, vuK_ = 1.0f, rectK_ = 1.0f;
     Chan ch_[2];
     int64_t now_ = 0;

@@ -56,7 +56,7 @@ TEST_CASE("view_model_unmeasured_shows_dash")
 {
     ViewInputs in = base();
     in.state = State::Queued; in.physLoop = -1;
-    REQUIRE(ViewModel::from(in).physLoopText == "—");
+    REQUIRE(ViewModel::from(in).physLoopText == "–");
 }
 
 TEST_CASE("view_model_anticipative_warning_names_the_track")
@@ -83,14 +83,14 @@ TEST_CASE("view_model_lead_in_hint")
 TEST_CASE("view_model_failure_reason_text_for_every_reason")
 {
     std::set<std::string> seen;
-    for (int r = static_cast<int>(Reason::ProjectLoad); r <= static_cast<int>(Reason::ChannelNotDelivered); ++r)
+    for (int r = static_cast<int>(Reason::ProjectLoad); r <= static_cast<int>(Reason::SampleRateChange); ++r)
     {
         const std::string t = reasonText(static_cast<Reason>(r));
         INFO(r);
         REQUIRE_FALSE(t.empty());
         seen.insert(t);
     }
-    REQUIRE(seen.size() == 29);   // 29 distinct strings
+    REQUIRE(seen.size() == 30);   // 30 distinct strings
     REQUIRE(reasonText(Reason::None).empty());
     ViewInputs in = base();
     in.state = State::Failed; in.reason = Reason::NoReturn;
@@ -125,28 +125,24 @@ TEST_CASE("view_model_library_warning_is_shown_while_audio_runs")
 
 TEST_CASE("view_model_host_version_label")
 {
-    // F1 §15: any host other than a validated one (7.83; 7.85 by the 2026-11-06 Apollo gate) runs but is marked; a validated
-    // version (any arch suffix) shows no label (f3_11 INFO row).
+    // Only a REAPER older than 7.6 is marked (user 2026-11-14); any arch suffix; unknown shows no label (the state already
+    // says UnsupportedHost when there is no REAPER API).
     ViewInputs in = base();
-    in.hostVersion = "7.83/macOS-arm64";
-    REQUIRE(ViewModel::from(in).warnings.empty());
-    in.hostVersion = "7.85/macOS-arm64";
-    REQUIRE(ViewModel::from(in).warnings.empty());
-    in.hostVersion = "7.86/macOS-arm64";      // newer than anything gated: marked
-    REQUIRE(ViewModel::from(in).warnings.size() == 1);
-    in.hostVersion = "7.850";                 // not 7.85
-    REQUIRE(ViewModel::from(in).warnings.size() == 1);
-    in.hostVersion = "7.84/macOS-arm64";
-    auto vm = ViewModel::from(in);
-    REQUIRE(vm.warnings.size() == 1);
-    REQUIRE(vm.warnings[0] == "Unvalidated host version 7.84/macOS-arm64");
-    in.hostVersion = "7.830";                 // not 7.83: prefix must end at the version boundary
-    REQUIRE(ViewModel::from(in).warnings.size() == 1);
-    in.hostVersion = "";                      // unknown (no REAPER API): no label, the state already says UnsupportedHost
-    REQUIRE(ViewModel::from(in).warnings.empty());
+    for (const char* ok : { "7.6", "7.60/x64", "7.83/macOS-arm64", "7.84/x64", "7.85/macOS-arm64", "7.86/macOS-arm64", "8.0/x64", "", "?" })
+    {
+        in.hostVersion = ok; INFO(ok);
+        REQUIRE(ViewModel::from(in).warnings.empty());
+    }
+    for (const char* old : { "7.59/x64", "7.5", "7.01/macOS-arm64", "6.83/x64" })
+    {
+        in.hostVersion = old; INFO(old);
+        const auto vm = ViewModel::from(in);
+        REQUIRE(vm.warnings.size() == 1);
+        REQUIRE(vm.warnings[0] == std::string("Unvalidated host version ") + old);
+    }
 }
 
-// Task 25 screenshots (Apollo -s9shot): the editor header read "NovaInsert Â· Insert" — a UTF-8 literal went through
+// Task 25 screenshots (Apollo -s9shot): the editor header read "NovaInsert Â· Insert" – a UTF-8 literal went through
 // juce::String (const char*) (ASCII). The title is built here as UTF-8 and the editor draws it through the std::string path.
 TEST_CASE("view_model_title_is_utf8_text_with_the_mode")
 {
@@ -174,7 +170,7 @@ TEST_CASE("view_model_cal_text")
 {
     const std::vector<std::pair<std::string, bool>> want = {
         { "", false },
-        { "SEND CAL: play the track — 3 s of it set to 0 VU = +4 dBu (press again to cancel)", false },
+        { "SEND CAL: play the track – 3 s of it set to 0 VU = +4 dBu (press again to cancel)", false },
         { "Measuring return…", false },
         { "Measuring return…", false },
         { "Calibrated", false },
@@ -185,7 +181,7 @@ TEST_CASE("view_model_cal_text")
         { "Return clipped: lower the outboard output", true },
         { "No return signal: check the outboard and cabling", true },
         { "Loop gain outside the trim range", true },
-        { "SEND CAL: no track signal within 30 s — start playback, then press CAL", true },
+        { "SEND CAL: no track signal within 30 s – start playback, then press CAL", true },
         { "SEND CAL: the track is too quiet or too loud for the trim range", true },
     };
     for (int s = 0; s < static_cast<int>(want.size()); ++s)
@@ -223,7 +219,7 @@ TEST_CASE("view_model_level_text_follows_the_meter_unit")
 {
     CHECK(ViewModel::levelText(-20.0f, true, 24.0f) == "+4.0 dBu");
     CHECK(ViewModel::levelText(-20.0f, false, 24.0f) == "−20.0 dBFS");
-    CHECK(ViewModel::levelText(-140.0f, true, 24.0f) == "—");
+    CHECK(ViewModel::levelText(-140.0f, true, 24.0f) == "–");
 }
 
 TEST_CASE("view_model_device_list_in_use")
@@ -232,7 +228,7 @@ TEST_CASE("view_model_device_list_in_use")
     in.devices = { { "SSL EQ stereo", "Vox" }, { "SSL EQ 1 mono", "" } };
     const auto vm = ViewModel::from(in);
     REQUIRE(vm.deviceItems.size() == 2);
-    CHECK(vm.deviceItems[0] == std::make_pair(std::string("SSL EQ stereo — in use: Vox"), false));
+    CHECK(vm.deviceItems[0] == std::make_pair(std::string("SSL EQ stereo – in use: Vox"), false));
     CHECK(vm.deviceItems[1] == std::make_pair(std::string("SSL EQ 1 mono"), true));
 }
 
@@ -240,9 +236,9 @@ TEST_CASE("view_model_dbu_and_dbfs_text")
 {
     CHECK(ViewModel::dbuText(-20.0f, 24.0f) == "+4.0 dBu");
     CHECK(ViewModel::dbuText(-30.0f, 24.0f) == "−6.0 dBu");
-    CHECK(ViewModel::dbuText(-140.0f, 24.0f) == "—");
+    CHECK(ViewModel::dbuText(-140.0f, 24.0f) == "–");
     CHECK(ViewModel::dbfsText(-20.0f) == "−20.0 dBFS");
-    CHECK(ViewModel::dbfsText(-140.0f) == "—");
+    CHECK(ViewModel::dbfsText(-140.0f) == "–");
 }
 
 TEST_CASE("view_model_defaults_changed_is_a_note")
@@ -264,14 +260,14 @@ TEST_CASE("view_model_channel_label")
 
 TEST_CASE("view_model_progress_text_says_the_output_is_muted_until_locked")
 {
-    // user 2026-11-05: after a device change the track is silent until the loop locks — the editor must say so
+    // user 2026-11-05: after a device change the track is silent until the loop locks – the editor must say so
     ViewInputs in = base();
     in.state = State::Measuring;
-    REQUIRE(ViewModel::from(in).progressText == "Latency check in progress — output muted until the loop is locked");
+    REQUIRE(ViewModel::from(in).progressText == "Latency check in progress – output muted until the loop is locked");
     in.state = State::Queued;
-    REQUIRE(ViewModel::from(in).progressText == "Latency check queued — output muted until the loop is locked");
+    REQUIRE(ViewModel::from(in).progressText == "Latency check queued – output muted until the loop is locked");
     in.state = State::ApplyingLatency;
-    REQUIRE(ViewModel::from(in).progressText == "Latency measured — output muted until REAPER applies the delay (play once)");
+    REQUIRE(ViewModel::from(in).progressText == "Latency measured – output muted until REAPER applies the delay (play once)");
     for (State s : { State::Locked, State::Idle, State::Failed, State::Stale })
     {
         in.state = s;
@@ -288,7 +284,7 @@ TEST_CASE("view_model_open_fallback_is_a_warning_naming_the_failure")
     const auto vm = ViewModel::from(in);
     bool found = false;
     for (const auto& w : vm.warnings)
-        if (w == "Open check failed: " + reasonText(Reason::NoReturn) + " \u2014 saved latency in use") found = true;
+        if (w == "Open check failed: " + reasonText(Reason::NoReturn) + " \u2013 saved latency in use") found = true;
     REQUIRE(found);
     for (int r = 0; r <= static_cast<int>(Reason::UserRequest); ++r)   // fits the status line with the longest reason (≤ 90 chars)
     {
@@ -304,8 +300,8 @@ TEST_CASE("view_model_open_fallback_is_a_warning_naming_the_failure")
     for (const auto& w : ViewModel::from(in).warnings) REQUIRE(w.find("saved latency") == std::string::npos);
 }
 
-// RE-CALIBRATION (user 2026-11-06): the button under SETUP is live only when the calibration failed — a Failed instance or a
-// failed open check running on the saved latency — never while a check runs or a good lock holds
+// RE-CALIBRATION (user 2026-11-06): the button under SETUP is live only when the calibration failed – a Failed instance or a
+// failed open check running on the saved latency – never while a check runs or a good lock holds
 TEST_CASE("view_model_recalibrate_enabled_only_after_a_failed_calibration")
 {
     ViewInputs in = base();

@@ -69,7 +69,7 @@ run() {   # run <name> <results dir> <command...>: the command gets --tag _<name
   [ "$r" = 0 ] || rc=1
 }
 
-S1="load1,load20,unload,sr44,driver_gate"; [ "$SND" = 1 ] && S1="$S1,default_device"
+S1="load1,load20,unload,sr44,sr176,driver_gate"; [ "$SND" = 1 ] && S1="$S1,default_device"
 BENCH=(python3 tests/f3/apollo/run_apollo.py --buffers "$BS" --scenarios "$SCEN")
 # F0.2 (hook <-> processBlock relation, the spike plugin; scenario A needs anticipative FX, the gate runs the _noant set)
 # F0.1 (REAPER API from a VST3, lifecycle; the bridge spike)

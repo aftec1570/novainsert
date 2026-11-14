@@ -1,4 +1,4 @@
-// DiagLog — opt-in diagnostics CSV (F1 §21 diagnostics). Off unless settings.json has "diagnostics": true.
+// DiagLog – opt-in diagnostics CSV (F1 §21 diagnostics). Off unless settings.json has "diagnostics": true.
 //   message thread (and other non-RT threads): text() writes a formatted row directly under a mutex to
 //   <dir>/f3-plugin-p<pid>.csv. Never called from the hook or processBlock (RT rule: no IO/formatting).
 // Row format: t,kind,inst,<text>  (the header names v0..v3 for the historic fixed-column rows the harness still accepts)

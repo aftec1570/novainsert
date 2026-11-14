@@ -196,7 +196,7 @@ juce::String MainPanel::readout (const Reading& r, bool send) const
     const float dbuAt0 = send ? in_.sendDbuAt0dBFS : in_.returnDbuAt0dBFS;
     if (! (send ? in_.sendStereo : in_.retStereo)) return juce::String (ViewModel::levelText (r.rmsDb[0], in_.meterDbu, dbuAt0));
     auto num = [&] (int c) {
-        if (r.rmsDb[c] <= ViewModel::kFloorDb) return std::string ("—");
+        if (r.rmsDb[c] <= ViewModel::kFloorDb) return std::string ("–");
         return ViewModel::signedText (in_.meterDbu ? r.rmsDb[c] + dbuAt0 : r.rmsDb[c], 1);
     };
     return juce::String ("L " + num (0) + "  R " + num (1) + (in_.meterDbu ? " dBu" : " dBFS"));
@@ -231,8 +231,8 @@ void MainPanel::update (const ViewInputs& source, int selectedDevice, const std:
         device.repaint();
     }
 
-    const auto pdc = in.reportedPdc >= 0 ? std::to_string (in.reportedPdc) + " smp" : std::string ("—");
-    const auto loop = in.physLoop >= 0 ? std::to_string (in.physLoop) + " smp" : std::string ("—");
+    const auto pdc = in.reportedPdc >= 0 ? std::to_string (in.reportedPdc) + " smp" : std::string ("–");
+    const auto loop = in.physLoop >= 0 ? std::to_string (in.physLoop) + " smp" : std::string ("–");
     lamp_.set (juce::Colour (vm_.stateColour), juce::String (vm_.stateText).toUpperCase(),
                juce::String ("LOOP " + loop + " · PDC " + pdc));
 
@@ -328,7 +328,7 @@ void MainPanel::paint (juce::Graphics& g)
     if (! vm_.calText.empty()) lines.emplace_back (juce::String (vm_.calText), vm_.calError ? juce::Colour (sk().error) : ink::cream);
     if (! vm_.failureReason.empty()) lines.emplace_back (juce::String (vm_.failureReason), juce::Colour (sk().error));
     for (const auto& w : vm_.warnings) lines.emplace_back (juce::String (w), ink::warn);
-    if (! vm_.noteText.empty()) lines.emplace_back (juce::String (vm_.noteText + " — see SETUP"), ink::label);
+    if (! vm_.noteText.empty()) lines.emplace_back (juce::String (vm_.noteText + " – see SETUP"), ink::label);
     if (vm_.showLeadInHint) lines.emplace_back ("Tip: enable the pre-roll lead-in so renders start with the loop already filled", ink::dim);
     const int textX = setupButton.getRight() + 12;   // SETUP holds the row's left end
     auto area = kText.withLeft (textX);

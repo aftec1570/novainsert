@@ -78,13 +78,13 @@ TEST_CASE("pre/post fan out to registered clients in slot order with running cyc
     REQUIRE(b.prePos.size() == 3);
 }
 
-TEST_CASE("registerClient returns -1 when all 20 slots are taken")
+TEST_CASE("registerClient hands out slots in order, past 20, and reuses a freed one")
 {
-    Harness h; RecordingClient c[21];
-    for (int i = 0; i < 20; ++i) REQUIRE(h.d.registerClient(&c[i]) == i);
-    REQUIRE(h.d.registerClient(&c[20]) == -1);
+    Harness h; RecordingClient c[22];
+    for (int i = 0; i < 21; ++i) REQUIRE(h.d.registerClient(&c[i]) == i);   // the 21st is no longer refused (was the 20 cap)
+    REQUIRE(h.d.registerClient(nullptr) == -1);
     h.d.unregisterClient(7);
-    REQUIRE(h.d.registerClient(&c[20]) == 7);
+    REQUIRE(h.d.registerClient(&c[21]) == 7);
 }
 
 TEST_CASE("len != expected block raises BufferChange once per change")
@@ -348,7 +348,7 @@ TEST_CASE("zeroed register channel counts fall back to the host-side counts and 
     REQUIRE(c.lastIn0 == g_in[0]);
 }
 
-// S6 review I2: REAPER hands a few null cycles and then stops calling the hook while the device key still reads open — the
+// S6 review I2: REAPER hands a few null cycles and then stops calling the hook while the device key still reads open – the
 // hook never sees the 500 ms mark, so the message-thread poll ages the run itself.
 TEST_CASE("a null run whose callbacks stop is a loss for the poll once 500 ms have passed")
 {
@@ -375,4 +375,34 @@ TEST_CASE("one null cycle followed by silence is not a loss")
     g_nowNs += 1'333'333; h.feed(64);
     g_nowNs += 2'000'000'000;
     REQUIRE_FALSE(h.d.deviceLostNow());          // a stopped stream after one null is a stop (DeviceReopen polling), not a run
+}
+
+TEST_CASE("no client limit: the table grows past its initial size and every client is called once per cycle", "[hook]")
+{
+    Harness h;
+    std::vector<RecordingClient> cs(3 * HookDispatcher::kInitialClients + 5);
+    std::vector<int> slots;
+    for (auto& c : cs) { const int s = h.d.registerClient(&c); REQUIRE(s >= 0); slots.push_back(s); }
+    REQUIRE(h.d.clientCapacity() >= static_cast<int>(cs.size()));
+    h.feed(64); h.feed(64);
+    for (const auto& c : cs) { REQUIRE(c.prePos == std::vector<int64_t> { 0, 64 }); REQUIRE(c.postPos == std::vector<int64_t> { 0, 64 }); }
+    h.d.unregisterClient(slots[0]);
+    h.feed(64);
+    REQUIRE(cs[0].prePos.size() == 2);
+    REQUIRE(cs[1].prePos.size() == 3);
+    RecordingClient late;   // a freed slot is reused before the table grows again
+    REQUIRE(h.d.registerClient(&late) == slots[0]);
+}
+
+TEST_CASE("growing the client table while the hook runs never calls a freed table", "[hook][rt]")
+{
+    Harness h;
+    std::atomic<bool> stop { false };
+    std::thread hook([&] { while (! stop.load()) { HookDispatcher::onAudioBuffer(false, 32, 48000.0, &h.reg); HookDispatcher::onAudioBuffer(true, 32, 48000.0, &h.reg); } });
+    std::vector<RecordingClient> cs(300);
+    for (auto& c : cs) REQUIRE(h.d.registerClient(&c) >= 0);
+    for (int i = 0; i < 300; ++i) h.d.unregisterClient(i);
+    stop.store(true);
+    hook.join();
+    REQUIRE(h.d.clientCapacity() >= 300);
 }

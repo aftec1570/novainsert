@@ -518,7 +518,7 @@ TEST_CASE("library_index_of_follows_an_external_delete_through_upsert")
     auto c = *mine.device("c"); c.sendTrimDb = 1.5f;
     REQUIRE(mine.upsertDevice(c));
     REQUIRE(mine.indexOf("c") == 2);
-    REQUIRE_FALSE(mine.reloadIfChanged());   // its own write noted the file: nothing later would realign it — the write must
+    REQUIRE_FALSE(mine.reloadIfChanged());   // its own write noted the file: nothing later would realign it – the write must
 }
 
 TEST_CASE("library_per_direction_widths_round_trip_and_legacy_stereo_key")

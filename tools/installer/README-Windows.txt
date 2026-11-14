@@ -1,4 +1,4 @@
-NovaInsert 1.2.1 for Windows x64 (VST3)
+NovaInsert 1.3.0 for Windows x64 (VST3)
 =======================================
 
 Install
@@ -11,7 +11,7 @@ Install
 
 This zip is NOT code-signed. Windows SmartScreen or your browser may warn about an "unknown publisher" when you
 download or unpack it. That is expected for an unsigned download: check the SHA-256 sum against the one published
-with the release (NovaInsert-1.2.1-Windows-x64.zip.sha256), then choose "Keep" / "More info" > "Run anyway" if a
+with the release (NovaInsert-1.3.0-Windows-x64.zip.sha256), then choose "Keep" / "More info" > "Run anyway" if a
 warning appears. Nothing in this package is an installer; you copy the plug-in folder yourself.
 
 Requirements

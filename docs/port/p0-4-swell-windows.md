@@ -1,4 +1,4 @@
-# P0.4 — SWELL window API under REAPER Linux (2026-11-09)
+# P0.4 – SWELL window API under REAPER Linux (2026-11-09)
 
 **Verdict: GO.** The Linux branch of `render_window_win.cpp` can detect the Render to File dialog the same way as
 Windows; the §5.6 fallback is not needed (it stays in the code for a null pointer).
@@ -33,7 +33,7 @@ REAPER does not call it for VST3 modules, the code takes the fallback and logs `
 ## Observed windows
 
 - Main window `REAPER v7.85 - EVALUATION LICENSE` (parent null), the evaluation `About REAPER v7.85/linux-x86_64 …`
-  nag (parent = main) — both exist **before** 40015, so identity-first detection ignores them.
+  nag (parent = main) – both exist **before** 40015, so identity-first detection ignores them.
 - After `Main_OnCommand(40015)`: a new visible window titled exactly **`Render to File`**, parent = main window.
   40015 returns immediately (the dialog is modeless on Linux, as on macOS).
 - Titles come back as UTF-8 (SWELL is UTF-8 throughout); the LangPack title check uses the same matcher.

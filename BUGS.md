@@ -1,4 +1,4 @@
-# NovaInsert — bug and fix ledger
+# NovaInsert – bug and fix ledger
 
 Every reported bug, its root cause, the fix and the release that carries it. Report new bugs at
 [GitHub Issues](https://github.com/aftec1570/novainsert/issues) or in the
@@ -13,8 +13,11 @@ Latest version: [download](https://github.com/aftec1570/novainsert/releases/late
 | 4 | 2026-11-12 | "Audio device lost" on Windows although the interface works in ReaInsert | Fixed | 1.2.1 |
 | 5 | 2026-11-12 | The meter view (VU / TUBE / LED / TWIN) comes back as VU | Fixed | 1.2.1 |
 | 6 | 2026-11-12 | ASIO4ALL and FlexASIO pass the Windows driver check although they are not supported | Fixed | 1.2.1 |
+| 7 | 2026-11-14 | A stereo unit with channels half a sample apart fails with "Channel asymmetry" now and then | Fixed | 1.3.0 |
+| 8 | 2026-11-14 | "Unvalidated host version 7.84/x64" reads like an error | Changed | 1.3.0 |
+| 9 | 2026-11-14 | "No signal returned from the hardware" on Windows (TC Konnekt x32 ASIO, dCS converters) where ReaInsert works | Awaiting diagnostics | |
 
-## #1 — Mouse wheel direction on trim knobs is reversed
+## #1 – Mouse wheel direction on trim knobs is reversed
 
 - **Reported:** 2026-11-08, GitHub issue #1 (thanks to sguyader).
 - **Symptom:** wheel down turned the SEND / RETURN trim clockwise (up), wheel up counter-clockwise (down).
@@ -28,7 +31,7 @@ Latest version: [download](https://github.com/aftec1570/novainsert/releases/late
   overwritten); in REAPER 7.85 with HID wheel events over the SEND trim: wheel up raised it, and with Reverse ticked the
   same wheel lowered it.
 
-## #2 — "Interface" in Preset Setup goes back to Apollo when saving a Custom preset
+## #2 – "Interface" in Preset Setup goes back to Apollo when saving a Custom preset
 
 - **Reported:** 2026-11-08, GitHub issue #2 (thanks to sguyader).
 - **Symptom:** choosing "Custom" as Interface and pressing SAVE showed "Apollo" again unless a dBu value was edited.
@@ -40,7 +43,7 @@ Latest version: [download](https://github.com/aftec1570/novainsert/releases/late
 - **Verified:** unit test for the interface line; in REAPER 7.85 a preset saved through PRESET SETUP keeps its typed
   levels and shows "CoreAudio BlackHole 64ch" as reported by REAPER, after SAVE and after reopening.
 
-## #4 — "Audio device lost" on Windows although the interface works in ReaInsert
+## #4 – "Audio device lost" on Windows although the interface works in ReaInsert
 
 - **Reported:** 2026-11-12 in the REAPER forum thread (REAPER 7.85, Windows 10, Yamaha Steinberg MR816 CSX on its native
   FireWire ASIO driver 1.7.8).
@@ -59,7 +62,7 @@ Latest version: [download](https://github.com/aftec1570/novainsert/releases/late
   (BlackHole) and on the Windows Babyface bench (PDC, fault scenarios). The exact driver behaviour could not be reproduced
   on the bench (REAPER's own input range shrinks the reported count instead).
 
-## #5 — The meter view (VU / TUBE / LED / TWIN) comes back as VU
+## #5 – The meter view (VU / TUBE / LED / TWIN) comes back as VU
 
 - **Reported:** 2026-11-12 in the REAPER forum thread (same report as #4).
 - **Root cause:** the meter view and the dBu / dBFS unit were kept only while REAPER ran, so every restart opened on VU.
@@ -67,7 +70,7 @@ Latest version: [download](https://github.com/aftec1570/novainsert/releases/late
   restarts; not saved in the project.
 - **Verified:** unit test (stored, read by a new process, other settings kept, invalid values read as the defaults).
 
-## #6 — ASIO4ALL and FlexASIO pass the Windows driver check
+## #6 – ASIO4ALL and FlexASIO pass the Windows driver check
 
 - **Reported:** 2026-11-12, found while investigating #4.
 - **Root cause:** REAPER reports these wrappers as ASIO, so the driver check accepted them although they are not supported.
@@ -77,7 +80,33 @@ Latest version: [download](https://github.com/aftec1570/novainsert/releases/late
 - **Verified:** unit tests; live on the Windows bench with ASIO4ALL 2.22, FlexASIO 1.10b, DirectSound and the Babyface's
   own driver as the control.
 
-## #3 — Measuring while the transport plays fails with "no return"
+## #7 – A stereo unit with channels half a sample apart fails with "Channel asymmetry"
+
+- **Reported:** 2026-11-14, found by the Hillside Studios test bench (UA Apollo, SSL EQ on the direct analog path).
+- **Symptom:** the SSL EQ locked in one run and failed with "Channel asymmetry" in the next, at 44.1 and 48 kHz alike.
+- **Root cause:** its right channel's loop sits at 872.5 samples, the left at 872.1. The whole-sample lag of the right
+  channel rounded to 872 or 873 from run to run, and the stereo check required both channels' whole-sample lags to match.
+- **Fix (1.3.0):** whole-sample lags one apart count as one loop when the channels' sub-sample positions lie within half a
+  sample; both channels take the rounded mean. A skew of a whole sample or more still fails.
+- **Verified:** unit tests (the straddling case locks on the common lag, a one-sample skew still fails); Apollo bench SSL EQ
+  6 of 6 runs locked at buffers 64 and 256.
+
+## #8 – "Unvalidated host version 7.84/x64" reads like an error
+
+- **Reported:** 2026-11-14 in the REAPER forum thread (Windows 10, REAPER 7.84).
+- **Root cause:** the notice appeared on every REAPER version except the two the bench had gated (7.83, 7.85).
+- **Change (1.3.0):** it appears only for REAPER older than 7.6; 7.6 and newer show nothing. It never changed how
+  NovaInsert works.
+- **Verified:** unit test over 7.6 / 7.84 / 7.86 / 8.0 (no notice) and 7.59 / 7.01 / 6.83 (notice).
+
+## #9 – "No signal returned from the hardware" with a TC Konnekt x32 and dCS converters
+
+- **Reported:** 2026-11-14 in the REAPER forum thread (Windows 10, REAPER 7.84, TC Electronic Digital Konnekt x32 on its
+  ASIO driver, dCS converters, analog gear; the same loop works in ReaInsert).
+- **Status:** awaiting the diagnostics log, the preset's channels and REAPER's ASIO input/output range. The message means
+  the latency ping went out and nothing came back on the preset's return channel within 0.45 s.
+
+## #3 – Measuring while the transport plays fails with "no return"
 
 - **Reported:** 2026-11-10, found by the Hillside Studios test bench (UA Apollo, scenario `ap_pdc_running_defer`);
   reproduced on BlackHole.

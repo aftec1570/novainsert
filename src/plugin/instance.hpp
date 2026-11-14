@@ -1,8 +1,8 @@
-// Instance — the realtime side of one NovaInsert instance (plan Task 11): owns the SlotLoopEngine, is the HookDispatcher
+// Instance – the realtime side of one NovaInsert instance (plan Task 11): owns the SlotLoopEngine, is the HookDispatcher
 // client for its hardware pair and feeds the engine from processBlock. JUCE-free so it is unit tested directly.
-//   message thread: configure(pair, routing, B) / release() — pair ownership, routing, latency, hook registration.
-//   processBlock:   process() — in place; false when inactive (the caller applies the Insert-silence / Effect-dry fallback).
-//   hook thread:    onPre/onPost — pick the pair's channels out of REAPER's full channel arrays, convert double <-> float
+//   message thread: configure(pair, routing, B) / release() – pair ownership, routing, latency, hook registration.
+//   processBlock:   process() – in place; false when inactive (the caller applies the Insert-silence / Effect-dry fallback).
+//   hook thread:    onPre/onPost – pick the pair's channels out of REAPER's full channel arrays, convert double <-> float
 //                   through preallocated scratch, write the pair's outputs by replacement (the pair is owned exclusively).
 // configure() applies a provisional physLoop = 2B + loopExtra (R = physLoop + 2B rounded up to whole blocks, as REAPER primes
 // PDC in whole blocks, F0.3; physLoop_origin=CONFIGURED) until applyResult() installs the Measurer's locked value (Insert) or
@@ -49,7 +49,7 @@ public:
 
     // processBlock thread. io[0..nch) in place (nch 1 or 2).
     bool process(float* const* io, int nch, int n, int64_t playPos, bool playing) noexcept;
-    // Task 21: steady-clock ms of the last process() call (any thread; -1 = never) — RenderArbiter "involved" (F1 §10).
+    // Task 21: steady-clock ms of the last process() call (any thread; -1 = never) – RenderArbiter "involved" (F1 §10).
     int64_t lastProcessedMs() const noexcept { return lastProcessedMs_.load(std::memory_order_relaxed); }
     static int64_t steadyMs() noexcept;   // same clock as host::Coordinator::steadyMs
 

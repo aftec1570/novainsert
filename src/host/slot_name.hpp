@@ -1,5 +1,5 @@
 // Own FX-slot name (user 2026-11-02): while a device is selected, REAPER's mixer/FX chain shows exactly the device's name
-// instead of "NovaInsert", and the slot is not renamable — a manual rename is reverted on the next sync. No device = the plain
+// instead of "NovaInsert", and the slot is not renamable – a manual rename is reverted on the next sync. No device = the plain
 // plugin name (renamed_name cleared). Message thread only (REAPER API calls); never from the audio thread.
 #pragma once
 #include <cstdint>

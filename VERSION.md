@@ -1,9 +1,37 @@
-# NovaInsert — version history
+# NovaInsert – version history
 
-Latest version: **1.2.1** · [Download the latest release (macOS DMG, Windows zip, Linux tar.gz)](https://github.com/aftec1570/novainsert/releases/latest) ·
+Latest version: **1.3.0** · [Download the latest release (macOS DMG, Windows zip, Linux tar.gz)](https://github.com/aftec1570/novainsert/releases/latest) ·
 [All releases](https://github.com/aftec1570/novainsert/releases) · [Bug and fix ledger](BUGS.md)
 
-## 1.2.1 — 2026-11-12
+## 1.3.0 – 2026-11-14
+
+Feature release. Projects, presets (`devices.json`), calibrations and settings from 1.0.x to 1.2.1 load unchanged on every
+platform; a stored calibration stays valid at the rate it was measured at.
+
+- **New: 44.1, 48, 88.2, 96 and 192 kHz.** NovaInsert used to run at 48 kHz only. Every timing inside it (meters, fades,
+  the level CAL tone and window, the delay-compensation checks, the millisecond readouts) now follows the device rate.
+  Other rates (176.4, 32 kHz, ...) still show "Unsupported rate".
+- **New: changing the sample rate re-measures every loop on its own** ("Sample rate changed"). Change the rate only while
+  the transport is stopped, never during playback or recording. A calibration is stored per rate, so going back to a rate
+  reuses it.
+- **New: no limit on active instances.** Up to 20 could run at once before; a 21st silently got no loop. More than 20 are
+  allowed now; 20 is what we have stress-tested, so beyond that the CPU at very small buffers is the limit.
+- **Fixed: a stereo unit whose channels sit half a sample apart failed with "Channel asymmetry"** now and then. Two
+  channels whose loops lie within half a sample are one loop and lock on the same delay; a real L/R skew of a sample or
+  more still fails. ([BUGS.md #7](BUGS.md))
+- **Changed: "Unvalidated host version" appears only for REAPER older than 7.6.** It is a notice, not an error.
+  ([#8](BUGS.md))
+- Validation: macOS hardware-validated on the UA Apollo bench at all five rates (four direct analog loops measure, lock and
+  render sample-aligned at each; ADAT loops at 44.1 and 48 kHz) and on REAPER 7.86; the live rate change was proven with the
+  transport stopped. Windows (RME Babyface Pro, native ASIO) and Linux: the new rates and the instance limit are covered by
+  the unit tests, not yet by hardware runs; Linux stays beta.
+
+SHA-256:
+- `NovaInsert-1.3.0-macOS-arm64.dmg`: `cbfec8c15419f3369ec71ca9bbba3d660544e631b01dd7f0a71a124919fc94c5`
+- `NovaInsert-1.3.0-Windows-x64.zip`: `38accb9e236f0d260a156ee7958fd908388ed4c666c882673b676499212a2cd6`
+- `NovaInsert-1.3.0-Linux-x86_64.tar.gz`: `7bdadc860e844baa58e6c3061f80c7b05479794d4b043fe0c34dbeddf25d68e6`
+
+## 1.2.1 – 2026-11-12
 
 Bug-fix release for the first Windows reports. Projects, presets (`devices.json`) and settings from 1.0.x, 1.1.x and 1.2.0
 load unchanged on every platform.
@@ -23,7 +51,7 @@ SHA-256:
 - `NovaInsert-1.2.1-Windows-x64.zip`: `5c987d4b21407883d084a18e957084889ad3a981552f3c00bd95329b1dc9f885`
 - `NovaInsert-1.2.1-Linux-x86_64.tar.gz`: `860b1b113aad023e9351cf9d2e124ddc3c140d25235737544a2b70e3cda2ad8a`
 
-## 1.2.0 — 2026-11-10
+## 1.2.0 – 2026-11-10
 
 Windows release. Projects, presets (`devices.json`) and settings from 1.0.x and 1.1.x load unchanged on every platform.
 
@@ -40,7 +68,7 @@ SHA-256:
 - `NovaInsert-1.2.0-Windows-x64.zip`: `7ff5b6628313f850dee25aac934c6a0bcfc642a52e5e8403b0009e842f56616b`
 - `NovaInsert-1.2.0-Linux-x86_64.tar.gz`: `a007eae36d928ffc30ececfa92f945cd367034fd783a86057ed05c49b40a1aaf`
 
-## 1.1.1 — 2026-11-10
+## 1.1.1 – 2026-11-10
 
 Bug-fix release for macOS and Linux. Projects, presets (`devices.json`) and settings from 1.0.x and 1.1.0 load unchanged.
 
@@ -57,7 +85,7 @@ SHA-256:
 - `NovaInsert-1.1.1-macOS-arm64.dmg`: `7c64d28ebb082e76bab73dc540ac4ec0c9b9f8e73ef8cecc51ec6a247804f14c`
 - `NovaInsert-1.1.1-Linux-x86_64.tar.gz`: `481571ad23c87f3b44915e7e3ba4b69b8b897c09a5a1c071106f6e176f586c4f`
 
-## 1.1.0 — 2026-11-09
+## 1.1.0 – 2026-11-09
 
 Linux release. Projects, presets (`devices.json`) and settings from 1.0.x load unchanged on every platform.
 
@@ -73,7 +101,7 @@ SHA-256:
 - `NovaInsert-1.1.0-macOS-arm64.dmg`: `0b4b519215ffdca3ed31baef335e861e9b68ce846b454641d256113049b16185`
 - `NovaInsert-1.1.0-Linux-x86_64.tar.gz`: `528d34d012ef9766f0c9611d11cad81933acdfa3c3ba51b63d83771e7530098a`
 
-## 1.0.1 — 2026-11-08
+## 1.0.1 – 2026-11-08
 
 Bug-fix release. Projects, presets (`devices.json`) and settings from 1.0.0 load unchanged.
 
@@ -86,7 +114,7 @@ Bug-fix release. Projects, presets (`devices.json`) and settings from 1.0.0 load
   Custom) is gone. PRESET SETUP and SETUP now show the audio device as REAPER reports it; the dBu-at-0-dBFS values are
   entered directly (default +24.0 dBu), since REAPER does not report a converter's analog level.
 
-## 1.0.0 — 2026-11-06
+## 1.0.0 – 2026-11-06
 
 First public release: REAPER-only VST3 hardware insert for macOS (Apple silicon) with automatic, sample-accurate
 round-trip latency measurement, device presets, mono/stereo routing per direction, VU and bar meters, level calibration

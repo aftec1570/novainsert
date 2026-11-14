@@ -1,9 +1,9 @@
-// CorrelatorWorker — the process-wide measurement correlation thread (F1 §8 "no correlation on the audio thread"; plan
+// CorrelatorWorker – the process-wide measurement correlation thread (F1 §8 "no correlation on the audio thread"; plan
 // Task 16). One low-priority std::thread ("NovaInsert correlator") owns the Correlator and analyses jobs FIFO; each result is
 // handed to the message thread through the injected post function (production: juce::MessageManager::callAsync), never
 // delivered from the worker itself. JUCE-free so it is unit tested directly.
 // Client: one per Measurer (CorrelationWorker). Its destructor (message thread) drops its queued jobs, waits for its running
-// job — the capture buffers are the Measurer's — and turns every already-posted result into a no-op.
+// job – the capture buffers are the Measurer's – and turns every already-posted result into a no-op.
 #pragma once
 #include <condition_variable>
 #include <cstdint>

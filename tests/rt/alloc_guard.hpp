@@ -1,5 +1,5 @@
 // Test utility: counts global operator new allocations while any AllocGuard is alive. LIMITATION: malloc/calloc/realloc
-// and aligned operator new are not intercepted (JUCE containers allocate via malloc) — see ledger S0 M2. Links its own operator new/delete into the
+// and aligned operator new are not intercepted (JUCE containers allocate via malloc) – see ledger S0 M2. Links its own operator new/delete into the
 // test binary (tests/rt/alloc_guard.cpp). Never part of the product.
 #pragma once
 #include <cstddef>

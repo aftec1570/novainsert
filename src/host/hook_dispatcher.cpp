@@ -6,7 +6,7 @@ namespace ni::host
 {
 namespace
 {
-// Hook thread: steady_clock is a single clock_gettime (libc++) / QueryPerformanceCounter (MSVC) call — no allocation.
+// Hook thread: steady_clock is a single clock_gettime (libc++) / QueryPerformanceCounter (MSVC) call – no allocation.
 uint64_t monotonicNs() noexcept
 {
     return static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::nanoseconds>(
@@ -14,8 +14,25 @@ uint64_t monotonicNs() noexcept
 }
 } // namespace
 
-HookDispatcher::HookDispatcher(ClockFn clock) : clock_(clock != nullptr ? clock : &monotonicNs) {}
-HookDispatcher::~HookDispatcher() { uninstall(); }
+HookDispatcher::HookDispatcher(ClockFn clock) : clock_(clock != nullptr ? clock : &monotonicNs)
+{
+    auto* t = new ClientTable(kInitialClients);
+    for (int i = 0; i < t->cap; ++i) t->slot[i].store(nullptr, std::memory_order_relaxed);
+    clients_.store(t, std::memory_order_release);
+}
+
+HookDispatcher::~HookDispatcher()
+{
+    uninstall();
+    delete clients_.exchange(nullptr, std::memory_order_acq_rel);
+}
+
+void HookDispatcher::waitForCycleEnd() const noexcept
+{
+    while (inCycle_.load(std::memory_order_seq_cst)) std::this_thread::yield();
+}
+
+int HookDispatcher::clientCapacity() const noexcept { return clients_.load(std::memory_order_acquire)->cap; }
 
 bool HookDispatcher::install(ReaperApi& api)
 {
@@ -45,20 +62,31 @@ void HookDispatcher::uninstall()
 int HookDispatcher::registerClient(IHookClient* c)
 {
     if (c == nullptr) return -1;
-    for (int i = 0; i < kMaxClients; ++i)
+    ClientTable* t = clients_.load(std::memory_order_acquire);
+    for (int i = 0; i < t->cap; ++i)
     {
         IHookClient* expected = nullptr;
-        if (clients_[i].compare_exchange_strong(expected, c, std::memory_order_acq_rel)) return i;
+        if (t->slot[i].compare_exchange_strong(expected, c, std::memory_order_seq_cst)) return i;
     }
-    return -1;
+    // Full: publish a table twice the size (slots keep their indices), then free the old one once no cycle holds it.
+    auto* grown = new ClientTable(t->cap * 2);
+    for (int i = 0; i < grown->cap; ++i)
+        grown->slot[i].store(i < t->cap ? t->slot[i].load(std::memory_order_relaxed) : nullptr, std::memory_order_relaxed);
+    const int slot = t->cap;
+    grown->slot[slot].store(c, std::memory_order_relaxed);
+    clients_.store(grown, std::memory_order_seq_cst);
+    waitForCycleEnd();   // a cycle that loaded the old table before the store finishes with it here
+    delete t;
+    return slot;
 }
 
 void HookDispatcher::unregisterClient(int slot)
 {
-    if (slot < 0 || slot >= kMaxClients) return;
-    clients_[slot].store(nullptr, std::memory_order_seq_cst);
+    ClientTable* t = clients_.load(std::memory_order_acquire);
+    if (slot < 0 || slot >= t->cap) return;
+    t->slot[slot].store(nullptr, std::memory_order_seq_cst);
     // A cycle that loaded the pointer before the store may still be calling the client: wait for it to finish.
-    while (inCycle_.load(std::memory_order_seq_cst)) std::this_thread::yield();
+    waitForCycleEnd();
 }
 
 HookDispatcher::Stats HookDispatcher::stats() const noexcept
@@ -130,8 +158,8 @@ void HookDispatcher::onAudioBuffer(bool isPost, int len, double srate, audio_hoo
 {
     if (reg == nullptr || reg->userdata1 == nullptr) return;
     auto* self = static_cast<HookDispatcher*>(reg->userdata1);
-    // Dekker handshake with unregisterClient(): this thread stores inCycle_ = true and then loads the client
-    // slots; the message thread stores the slot = nullptr and then loads inCycle_. Both sides' store and load
+    // Dekker handshake with unregisterClient() / registerClient(): this thread stores inCycle_ = true and then loads the
+    // client table and slots; the message thread stores the slot = nullptr (or a grown table) and then loads inCycle_. Both sides' store and load
     // must be seq_cst (a plain acquire load of the slot may be reordered before the seq_cst store on arm64,
     // letting unregisterClient() see inCycle_ == false while this cycle still holds the client pointer).
     self->inCycle_.store(true, std::memory_order_seq_cst);
@@ -225,15 +253,16 @@ void HookDispatcher::cycle(bool isPost, int len, double srate, audio_hook_regist
 
     if (null) return;
 
+    ClientTable* t = clients_.load(std::memory_order_seq_cst);   // after inCycle_ = true (handshake with registerClient)
     if (!isPost)
     {
-        for (auto& slot : clients_)
-            if (IHookClient* c = slot.load(std::memory_order_seq_cst)) c->onPre(cyclePos_, len, bufs_, n);
+        for (int i = 0; i < t->cap; ++i)
+            if (IHookClient* c = t->slot[i].load(std::memory_order_seq_cst)) c->onPre(cyclePos_, len, bufs_, n);
     }
     else
     {
-        for (auto& slot : clients_)
-            if (IHookClient* c = slot.load(std::memory_order_seq_cst)) c->onPost(cyclePos_, len, bufs_, n);
+        for (int i = 0; i < t->cap; ++i)
+            if (IHookClient* c = t->slot[i].load(std::memory_order_seq_cst)) c->onPost(cyclePos_, len, bufs_, n);
         cyclePos_ += len;
     }
 }

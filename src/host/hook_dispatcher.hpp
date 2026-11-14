@@ -1,6 +1,6 @@
-// HookDispatcher — the single REAPER Audio_RegHardwareHook registration shared by every NovaInsert instance
+// HookDispatcher – the single REAPER Audio_RegHardwareHook registration shared by every NovaInsert instance
 // (F1 §1 Coordinator/HookDispatcher, §14 RT-safety, §22 row 1 dropout detector).
-//   hook thread: onAudioBuffer() — no allocation, no locks, no waits. Fans out to client slots, measures the
+//   hook thread: onAudioBuffer() – no allocation, no locks, no waits. Fans out to client slots, measures the
 //                inter-cycle span, detects buffer-size changes and null-buffer (device lost) cycles, and pushes
 //                host events into a bounded ring.
 //   message thread: install/uninstall, registerClient/unregisterClient, setExpectedBlock, drainEvents().
@@ -8,6 +8,7 @@
 #include <atomic>
 #include <cstdint>
 #include <functional>
+#include <memory>
 #include "engine/rings.hpp"
 #include "engine/types.hpp"
 #include "host/reaper_api.hpp"
@@ -27,7 +28,8 @@ public:
 class HookDispatcher
 {
 public:
-    static constexpr int kMaxClients = engine::kMaxInstances;   // 20
+    // No limit on clients (user 2026-11-14, was 20): the slot table grows on the message thread (kInitialClients, doubling).
+    static constexpr int kInitialClients = 32;
     static constexpr int kMaxChannels = 128;                    // hardware channels gathered per cycle
     static constexpr int kNullCyclesToLost = 2;
     // ...and the null run must also have lasted this long: REAPER's own re-prepare at the end of an online render hands
@@ -46,7 +48,7 @@ public:
     void uninstall();
     bool installed() const noexcept { return installed_; }
 
-    int registerClient(IHookClient* c);                         // slot 0..19, or -1 when full
+    int registerClient(IHookClient* c);                         // slot >= 0 (the table grows when full), -1 for nullptr
     void unregisterClient(int slot);                            // returns only after any in-flight cycle has finished
 
     struct Stats
@@ -93,7 +95,19 @@ private:
     audio_hook_register_t reg_ {};
     bool installed_ = false;
 
-    std::atomic<IHookClient*> clients_[kMaxClients] {};
+    // Client slots. The hook thread loads the current table once per cycle; registerClient (message thread) publishes a
+    // bigger copy when full and frees the old one only once no cycle can still hold it (same handshake as unregisterClient).
+    struct ClientTable
+    {
+        explicit ClientTable(int n) : cap(n), slot(std::make_unique<std::atomic<IHookClient*>[]>(static_cast<size_t>(n))) {}
+        const int cap;
+        std::unique_ptr<std::atomic<IHookClient*>[]> slot;
+    };
+    std::atomic<ClientTable*> clients_ { nullptr };
+    void waitForCycleEnd() const noexcept;
+public:
+    int clientCapacity() const noexcept;                        // message thread / tests: current table size
+private:
     std::atomic<bool> inCycle_ { false };
 
     std::atomic<int> expectedBlock_ { 0 };

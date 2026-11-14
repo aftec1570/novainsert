@@ -1,6 +1,6 @@
 #!/bin/bash
 # Configures, builds and runs the unit tests. Prints one "<preset> PASS|FAIL" line each; exit 1 on any FAIL.
-# Usage: tests/run_unit.sh [preset ...|all]   (default: release — the quick loop; a freeze gate runs "all" = debug release asan tsan)
+# Usage: tests/run_unit.sh [preset ...|all]   (default: release – the quick loop; a freeze gate runs "all" = debug release asan tsan)
 # The presets build and test side by side, sharing the machine's cores (NI_JOBS overrides the core count).
 set -u
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"

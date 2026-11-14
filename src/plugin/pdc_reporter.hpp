@@ -33,6 +33,7 @@ public:
     void onTransport (bool playing, int64_t nowMs);
     void tick (int64_t nowMs);
     void cancel() noexcept;                       // a new request / released loop: drop the pending or awaited transition
+    void setSampleRate (int fs) noexcept { fs_ = fs; }          // the observer's 8-cycle window is timed at this rate
     void noteReported (int32_t R) noexcept { reported_ = R; }   // latency the processor set itself (provisional, release → 0)
     int32_t reported() const noexcept { return reported_; }
     bool pending() const noexcept { return pendingR_ >= 0; }
@@ -50,6 +51,7 @@ private:
     int32_t reported_ = 0, pendingR_ = -1;
     uint32_t gen_ = 0;
     int block_ = 0;
+    int fs_ = ni::engine::kDefaultSampleRate;
     bool playing_ = false, awaiting_ = false, timedOut_ = false, retryLeft_ = false, stoppedAfterTimeout_ = false, muted_ = false;
 };
 } // namespace ni::plugin

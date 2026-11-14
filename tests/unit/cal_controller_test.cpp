@@ -47,10 +47,10 @@ CalStatus runReturn(CalController& cc, FakePort& p, const CalContext& c)
     REQUIRE(cc.pressReturn(c) == CalStatus::ReturnSettling);
     double t = 0.0;
     cc.tick(c, t);
-    p.elapsed = p.loop + cal::kSettleSamples + cal::kWindowSamples / 2;
+    p.elapsed = p.loop + cal::settleSamples(48000) + cal::windowSamples(48000, ni::engine::kLMax, 4 * ni::engine::kLMax) / 2;
     t += 2.0;
     REQUIRE(cc.tick(c, t) == CalStatus::ReturnMeasuring);
-    p.elapsed = p.loop + cal::kSettleSamples + cal::kWindowSamples;
+    p.elapsed = p.loop + cal::settleSamples(48000) + cal::windowSamples(48000, ni::engine::kLMax, 4 * ni::engine::kLMax);
     t += 2.0;
     return cc.tick(c, t);
 }
@@ -73,7 +73,7 @@ TEST_CASE("cal_controller_refusals")
 }
 
 // SEND CAL (user 2026-11-06): "it should put out the track material at +4 dBu adjusting the trim … If linked the adjustment
-// by the calibration should affect the linked return" / "+0 … which should be +4 dB" — the track's own program, averaged over
+// by the calibration should affect the linked return" / "+0 … which should be +4 dB" – the track's own program, averaged over
 // 3 s of signal, is set to 0 VU = +4 dBu at the converter: sendTrim = (4 − sendDbuAt0dBFS) − (program level before the trim).
 // No tone, no mute. The send meter (AES17, after trim and offsets) arrives in CalContext::sendLevelDbfs on every tick.
 namespace
@@ -273,7 +273,7 @@ TEST_CASE("cal_controller_record_start_aborts_cal")
     FakePort p; CalController cc(p);
     auto c = ctx();
     REQUIRE(cc.pressReturn(c) == CalStatus::ReturnSettling);
-    p.elapsed = p.loop + cal::kSettleSamples + 100;
+    p.elapsed = p.loop + cal::settleSamples(48000) + 100;
     REQUIRE(cc.tick(c, 1.0) == CalStatus::ReturnMeasuring);
     c.recording = true;
     CHECK(cc.tick(c, 1.1) == CalStatus::RefusedRecording);
