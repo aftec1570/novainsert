@@ -54,7 +54,7 @@ You are responsible for the routing, the monitoring level and the hardware. See 
 
 | Requirement | Value |
 |---|---|
-| Host | REAPER 7.83 or newer (validated on 7.83 and 7.85) |
+| Host | REAPER 7.6 or newer (tested on 7.83, 7.84, 7.85 and 7.86) |
 | Platform | macOS on Apple silicon (arm64); Windows 10 or 11 x64; Linux x86_64 with glibc 2.35 or newer (Ubuntu 22.04 or newer), beta |
 | Plug-in format | VST3 only |
 | Sample rate | 44.1, 48, 88.2, 96 or 192 kHz (macOS: hardware-validated on the Apollo at all five; change the rate only while stopped) |
@@ -291,7 +291,7 @@ pass have no hardware return yet. NovaInsert reports the gap instead of hiding i
 
 ## Limitations of version 1.3.0
 
-- 44.1, 48, 88.2, 96 or 192 kHz (hardware-validated on the Apollo at all five; change the rate only with the transport stopped, every loop then re-measures on its own), REAPER 7.83 or newer (validated on 7.83 and 7.85), VST3 only.
+- 44.1, 48, 88.2, 96 or 192 kHz (hardware-validated on the Apollo at all five; change the rate only with the transport stopped, every loop then re-measures on its own), REAPER 7.6 or newer (tested on 7.83, 7.84, 7.85 and 7.86), VST3 only.
 - macOS Apple silicon, Windows x64 and Linux x86_64 only. CoreAudio (macOS), ASIO (Windows) and ALSA (Linux) only.
 - Windows is validated on one interface (RME Babyface Pro) with cable loops; other ASIO interfaces are untested. The zip is not code-signed.
 - Linux is functionally validated in a virtual environment; hardware timing validation pending (beta).

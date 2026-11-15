@@ -34,7 +34,7 @@ You are responsible for the routing, the monitoring level and the hardware. See 
 
 | Requirement | Value |
 |---|---|
-| Host | REAPER 7.83 or newer (validated on 7.83 and 7.85), macOS, Apple silicon (arm64) |
+| Host | REAPER 7.6 or newer (tested on 7.83, 7.84, 7.85 and 7.86), macOS, Apple silicon (arm64) |
 | Plug-in format | VST3 only |
 | Sample rate | 44.1, 48, 88.2, 96 or 192 kHz (macOS: hardware-validated on the Apollo at all five; change the rate only while stopped) |
 | Audio device | one specific CoreAudio device selected in REAPER, not the system default |
@@ -387,7 +387,7 @@ The snapshot means a later edit of the library cannot change how an old project 
 | Audio device lost | REAPER lost the interface | reconnect; the instance re-measures when it returns |
 | REAPER delivers no audio on this preset's channel… | the preset uses an input or output REAPER reports but does not pass on (outside the enabled input/output range, or a channel the driver lists but does not serve); the warning line names it, e.g. "Not delivered by REAPER: input 25" | enable that channel in Preferences > Audio > Device, or pick channels that are delivered; the instance measures as soon as it is |
 | Open check failed: <reason> – saved latency in use | the measurement on project open did not lock; the latency saved with the project is running | fix the cause named after the colon, then press RE-CALIBRATION |
-| Unvalidated host version <v> | REAPER is older than 7.6 | informational; update REAPER (7.83 or newer is the requirement) |
+| Unvalidated host version <v> | REAPER is older than 7.6 | informational; update REAPER (7.6 or newer is the requirement) |
 | Device library: … | the JSON file is missing, unreadable, read-only or newer than this version | fix the file; nothing was overwritten |
 | SEND CAL: play the track – 3 s of it set to 0 VU = +4 dBu | SEND CAL is listening to the track | chapter 9 |
 | Return clipped: lower the outboard output | RETURN CAL refused | chapter 9 |
@@ -396,7 +396,7 @@ The snapshot means a later edit of the library cannot change how an old project 
 
 ## 19. Limitations of version 1.0.1
 
-- 44.1, 48, 88.2, 96 or 192 kHz (hardware-validated on the Apollo at all five; change the rate only with the transport stopped, every loop then re-measures on its own), REAPER 7.83 or newer (validated on 7.83 and 7.85), macOS Apple silicon, VST3 only.
+- 44.1, 48, 88.2, 96 or 192 kHz (hardware-validated on the Apollo at all five; change the rate only with the transport stopped, every loop then re-measures on its own), REAPER 7.6 or newer (tested on 7.83, 7.84, 7.85 and 7.86), macOS Apple silicon, VST3 only.
 - Presets are stored by position: deleting one shifts the later ones in projects that have not been reopened since (chapter 4).
 - The first "loop length" samples of each play or render pass have no hardware return (chapter 13).
 - Effect mode alignment is driver-reported, not sample-measured.
