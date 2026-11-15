@@ -260,7 +260,7 @@ remember this:
 
 REAPER fills the compensation delay from the start of each play or render pass, so the first "loop length" samples of a
 pass have no hardware return yet. NovaInsert reports the gap instead of hiding it; enable REAPER's pre-roll and set the
-"Pre-roll lead-in" parameter to clear the tip.
+"Pre-roll lead-in" parameter to clear the tip. The parameter has no control on the editor panel: click UI at the top right of REAPER's FX window to switch to REAPER's generic parameter view and set it there, or reach it from the track's envelope list.
 
 ## Several devices, anticipative FX, files
 

@@ -128,6 +128,17 @@ int main (int argc, char** argv)
     }
     save (body (p, st, 2, sine (-21.0f, -19.5f), sine (-20.5f, -20.0f)), "stereo_locked.png");
 
+    // 1b. the editor body of docs/manual/img/reaper_window.png (BlackHole loop, Locked). Not used directly by the manual:
+    //     the manual image is REAPER's FX window title and preset bar (top 106 px of a real capture) stacked on this one.
+    {
+        auto bh = base (true);
+        bh.deviceName = "BH stereo"; bh.interfaceName = "BlackHole 64ch";
+        bh.outName = "Out 9/10"; bh.inName = "In 9/10";
+        bh.physLoop = 256; bh.reportedPdc = 512;
+        bh.devices = { { "BH stereo", "" } };
+        save (body (p, bh, 1, sine (-21.0f, -19.5f), sine (-20.5f, -20.0f)), "reaper_editor.png");
+    }
+
     // 2. mono 1176, Locked, send from L, return to both
     auto mono = base (false);
     save (body (p, mono, 1, sine (-22.0f, -120.0f), sine (-22.5f, -120.0f)), "mono_locked.png");
