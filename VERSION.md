@@ -3,7 +3,7 @@
 Latest version: **1.3.0** · [Download the latest release (macOS DMG, Windows zip, Linux tar.gz)](https://github.com/aftec1570/novainsert/releases/latest) ·
 [All releases](https://github.com/aftec1570/novainsert/releases) · [Bug and fix ledger](BUGS.md)
 
-## 1.4.0-beta.2 – 2026-11-15 (Linux pre-release)
+## 1.4beta – 2026-11-15 (Linux pre-release)
 
 Pre-release for Linux testers; macOS and Windows stay on 1.3.0 (no change for them). Same projects, presets and settings
 as 1.3.0.
@@ -13,8 +13,8 @@ as 1.3.0.
   loop is measured whenever a project opens and a saved latency is never used as a fallback; re-calibrate after changing
   JACK connections (README "JACK and PipeWire on Linux").
 - **A beta build says so:** the editor footer reads "BETA BUILD – not a production release" in amber. It installs as the
-  same NovaInsert plug-in and replaces the installed 1.3.0; reinstall 1.3.0 to go back. (beta.1, published an hour earlier,
-  only showed the version number.)
+  same NovaInsert plug-in and replaces the installed 1.3.0; reinstall 1.3.0 to go back. (The first upload, "1.4.0-beta.1",
+  only showed the version number; please use 1.4beta.)
 - Validation: the Linux tier B suite on a virtual JACK server (measure, delay compensation, render, faults, multi-instance)
   passes; no real interface and no PipeWire system tested yet.
 
