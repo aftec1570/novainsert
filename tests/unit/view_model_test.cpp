@@ -354,7 +354,7 @@ TEST_CASE("view model: DriverUnsupported text and driver warnings", "[view_model
 #if defined(_WIN32)
     REQUIRE(reasonText(Reason::DriverUnsupported) == "Audio driver not supported, NovaInsert is bypassed. Use the interface's own ASIO driver (not ASIO4ALL or FlexASIO)");
 #else
-    REQUIRE(reasonText(Reason::DriverUnsupported) == "REAPER's audio driver is not supported. NovaInsert needs ASIO on Windows / ALSA on Linux");
+    REQUIRE(reasonText(Reason::DriverUnsupported) == "REAPER's audio driver is not supported. NovaInsert needs ASIO on Windows / ALSA or JACK on Linux");
 #endif
     auto has = [](const ViewModel& vm, const std::string& w) { return std::find(vm.warnings.begin(), vm.warnings.end(), w) != vm.warnings.end(); };
     ViewInputs in;
@@ -366,6 +366,10 @@ TEST_CASE("view model: DriverUnsupported text and driver warnings", "[view_model
     ov.driverOverride = true; ov.driverMode = "Dummy Audio";
     REQUIRE(has(ViewModel::from(ov), "TEST DRIVER: Dummy Audio"));
     REQUIRE_FALSE(has(ViewModel::from(ViewInputs {}), "TEST DRIVER: "));
+    ViewInputs jb;   // JACK on Linux (beta, user 2026-11-15)
+    jb.state = State::Locked; jb.driverBeta = true; jb.driverMode = "JACK";
+    REQUIRE(has(ViewModel::from(jb), "JACK (beta): re-calibrate after changing JACK connections"));
+    REQUIRE_FALSE(has(ViewModel::from(ViewInputs {}), "JACK (beta)"));
     ViewInputs nd;
     nd.state = State::Unavailable; nd.reason = Reason::ChannelNotDelivered; nd.missingChannel = "input 25";
     REQUIRE(has(ViewModel::from(nd), "Not delivered by REAPER: input 25"));

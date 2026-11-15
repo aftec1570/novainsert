@@ -157,7 +157,22 @@ TEST_CASE("driverVerdict: family prefix match", "[reaper_api]")          // Revi
     REQUIRE(ni::host::driverVerdict(ok + "X") == V::Unsupported);   // a token, not a raw prefix
     REQUIRE(ni::host::driverVerdict("Dummy Audio") == V::Unsupported);
     REQUIRE(ni::host::driverVerdict("WASAPI") == V::Unsupported);
-    REQUIRE(ni::host::driverVerdict("JACK") == V::Unsupported);
+    // JACK is the Linux build's beta family (user 2026-11-15); everywhere else it stays unsupported
+    REQUIRE(ni::host::driverVerdict("JACK") == (std::string(ni::host::platform::kBetaDriver).empty() ? V::Unsupported : V::Beta));
+}
+
+TEST_CASE("driverVerdictFor: a beta family arms as Beta, never as Supported", "[reaper_api]")   // user 2026-11-15
+{
+    using V = ni::host::DriverVerdict;
+    using ni::host::driverVerdictFor;
+    REQUIRE(driverVerdictFor("ALSA 0,0 16-bit", "ALSA", "JACK") == V::Supported);
+    REQUIRE(driverVerdictFor("JACK", "ALSA", "JACK") == V::Beta);
+    REQUIRE(driverVerdictFor("jack", "ALSA", "JACK") == V::Beta);
+    REQUIRE(driverVerdictFor("  JACK  ", "ALSA", "JACK") == V::Beta);
+    REQUIRE(driverVerdictFor("JACKX", "ALSA", "JACK") == V::Unsupported);
+    REQUIRE(driverVerdictFor("Dummy Audio", "ALSA", "JACK") == V::Unsupported);
+    REQUIRE(driverVerdictFor("JACK", "ALSA", "") == V::Unsupported);   // no beta family: an empty name never matches
+    REQUIRE(driverVerdictFor("", "ALSA", "JACK") == V::Unknown);
 }
 
 TEST_CASE("driverVerdict: empty mode passes as Unknown", "[reaper_api]")  // Review Focus 2

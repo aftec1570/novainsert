@@ -11,6 +11,7 @@ Probe: `tests/reaper/devinfo_probe.lua` (REAPER 7.85), which writes
 | Linux | ALSA, `hw:0,0` | `Other` | `ALSA 0,0 16-bit` | `ALSA 0,0` | `ALSA 0,0` |
 | Linux | ALSA, `plughw:0,0` | `Other` | `ALSA plughw:0,0` | `ALSA 0,0` | `ALSA 0,0` |
 | Linux | Dummy Audio | `Other` | `Dummy Audio` | `Dummy Audio` | `Dummy Audio` |
+| Linux | JACK (jackd dummy, tier B container, REAPER 7.85, 2026-11-15) | `Other` | `JACK` | `JackIn` | `JackOut` |
 | Windows | ASIO, RME Babyface Pro (`ASIO Fireface USB`) | *(not logged)* | `ASIO` | `ASIO ASIO Fireface USB` | `ASIO ASIO Fireface USB` |
 | Windows | ASIO4ALL 2.22 (negative row) | *(not logged)* | `ASIO` | `ASIO ASIO4ALL v2` | `ASIO ASIO4ALL v2` |
 | Windows | FlexASIO 1.10b (negative row) | *(not logged)* | `ASIO` | `ASIO FlexASIO` | `ASIO FlexASIO` |
@@ -30,3 +31,5 @@ dg_asio4all,dg_flexasio,dg_directsound,dg_control`, `f3-driver.csv` `devinfo_*` 
 - **Generic ASIO wrappers show only in IDENT.** ASIO4ALL and FlexASIO report MODE `ASIO` like a native driver; the
   wrapper's name appears in IDENT_IN / IDENT_OUT (`ASIO <registered driver name>`), so the Windows gate checks all three.
 - `Dummy Audio` is not ALSA: it is rejected unless `allowAnyDriver` is set (tier B in the container uses that).
+- **JACK names no hardware.** `JackIn` / `JackOut` are the same for every JACK graph (jackd or PipeWire's JACK layer), so on
+  Linux JACK arms as a beta whose device key is never trusted for a restore (2026-11-15).

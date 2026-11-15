@@ -169,6 +169,7 @@ private:
     // Driver gate (1.1.0 port): MODE as REAPER reports it, the allowAnyDriver override, and the once/on-change log state
     std::string driverMode_, lastUnsupportedMode_;
     bool driverOverride_ = false, driverUnknownLogged_ = false, driverOverrideLogged_ = false;
+    bool driverBeta_ = false, driverBetaLogged_ = false;   // JACK on Linux (beta): armed, but a saved latency is never reused
     std::vector<std::string> outNames_, inNames_;   // host channel names for the DEVICES page (pollLibrary)
     int libraryIndexOf (const std::string& id) const;   // 1-based library index, 0 = not in the library
     void realignClaim();                                // after a library reload/delete: the claimed index follows the running record's id

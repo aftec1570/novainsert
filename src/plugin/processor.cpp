@@ -460,9 +460,15 @@ void NovaInsertProcessor::evaluateHostState (Reason trigger)
       for (const auto* s : { &key.mode, &key.identIn, &key.identOut })
         if (const auto w = ni::host::genericAsioWrapper (*s); ! w.empty()) { driverMode_ = key.mode.empty() ? w : key.mode + " (" + w + ")"; break; }
     driverOverride_ = false;
+    driverBeta_ = false;
     switch (ni::host::deviceDriverVerdict (key))
     {
         case ni::host::DriverVerdict::Supported: lastUnsupportedMode_.clear(); break;
+        case ni::host::DriverVerdict::Beta:
+            lastUnsupportedMode_.clear();
+            driverBeta_ = true;
+            if (! driverBetaLogged_) { driverBetaLogged_ = true; ni::host::DiagLog::get().text ("DRIVER_BETA", instNo_, "%s", driverMode_.c_str()); }
+            break;
         case ni::host::DriverVerdict::Unknown:
             lastUnsupportedMode_.clear();
             if (! driverUnknownLogged_) { driverUnknownLogged_ = true; ni::host::DiagLog::get().text ("DRIVER_UNKNOWN", instNo_, "mode="); }
@@ -781,7 +787,7 @@ void NovaInsertProcessor::serviceMeasurer()
             const int32_t sp = snap ? snap->result.physLoop[0] : -1;
             const bool inRange = sp >= 0 && sp <= ni::engine::kLMax - 2 * loopCfg_.B;   // same bound as a measured result (review M1)
             const bool onOpen = library_ ? library_->settings().measureOnOpen : true;
-            const auto action = key && inRange ? ni::plugin::restoreAction (*pending, *key, onOpen) : ni::plugin::RestoreAction::Remeasure;
+            const auto action = key && inRange ? ni::plugin::restoreAction (*pending, *key, onOpen, ! driverBeta_) : ni::plugin::RestoreAction::Remeasure;
             const bool apply = action == ni::plugin::RestoreAction::ApplySnapshot;
             if (action == ni::plugin::RestoreAction::MeasureKeepSnapshot) openKept_ = snap;   // measure now; the snapshot is the fallback
             ni::host::DiagLog::get().text ("STATE", instNo_, "restore|gen=%u|apply=%d|keep=%d|phys=%d|B=%d", measureGen_, apply ? 1 : 0,
@@ -1012,6 +1018,7 @@ ni::gui::ViewInputs NovaInsertProcessor::viewInputs() const
     in.reason = lastReason_;
     in.driverMode = driverMode_;
     in.driverOverride = driverOverride_;
+    in.driverBeta = driverBeta_;
     in.missingChannel = missingChannel_;
     const bool active = inst_ && inst_->active();
     in.physLoop = active ? inst_->physLoop() : -1;

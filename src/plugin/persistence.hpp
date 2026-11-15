@@ -41,7 +41,9 @@ enum class RestoreAction { ApplySnapshot, Remeasure, MeasureKeepSnapshot };
 // ApplySnapshot: a successful calibration snapshot whose key equals the current one → ApplyingLatency(StateRestore), 0 probes.
 // MeasureKeepSnapshot (measure on open, user 2026-11-06): the same snapshot, but the instance measures and keeps it as the
 // fallback for a final failure. Remeasure: no usable snapshot for this key.
-RestoreAction restoreAction(const InstanceState& s, const engine::CalibKey& current, bool measureOnOpen = false);
+// identityVerified false (a JACK device key, which names no hardware): always Remeasure, with no snapshot kept as a fallback.
+RestoreAction restoreAction(const InstanceState& s, const engine::CalibKey& current, bool measureOnOpen = false,
+                            bool identityVerified = true);
 // The snapshot a failed measure-on-open falls back to: only on a final failure (no retry queued) and only while the key is still
 // the one the snapshot was taken under.
 std::optional<CalibRecord> openFallback(const std::optional<CalibRecord>& kept, bool finalFailure,

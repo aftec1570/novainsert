@@ -58,20 +58,35 @@ You are responsible for the routing, the monitoring level and the hardware. See 
 | Platform | macOS on Apple silicon (arm64); Windows 10 or 11 x64; Linux x86_64 with glibc 2.35 or newer (Ubuntu 22.04 or newer), beta |
 | Plug-in format | VST3 only |
 | Sample rate | 44.1, 48, 88.2, 96 or 192 kHz (macOS: hardware-validated on the Apollo at all five; change the rate only while stopped) |
-| Audio device | macOS: one specific CoreAudio device selected in REAPER, not the system default; Windows: the interface's native ASIO driver; Linux: one specific ALSA device (`hw:` or `plughw:`), not `default` |
+| Audio device | macOS: one specific CoreAudio device selected in REAPER, not the system default; Windows: the interface's native ASIO driver; Linux: one specific ALSA device (`hw:` or `plughw:`), not `default`, or JACK / PipeWire-JACK (beta) |
 | Instances | no limit (20 active instances validated; more are up to your CPU at small buffers) |
 | Loop length | up to 65 536 samples |
 
 **Audio driver.** NovaInsert works only on REAPER's native driver for the platform: CoreAudio on macOS, ASIO on Windows,
-ALSA on Linux. On any other driver (JACK, PulseAudio, Dummy Audio, …) it does not arm or measure and shows
-"REAPER's audio driver is not supported. NovaInsert needs ASIO on Windows / ALSA on Linux". Switch REAPER to the native
-driver in Options → Preferences → Audio → Device.
+ALSA on Linux, plus JACK on Linux as a beta (below). On any other driver (PulseAudio, Dummy Audio, …) it does not arm or
+measure and shows "REAPER's audio driver is not supported. NovaInsert needs ASIO on Windows / ALSA or JACK on Linux".
+Switch REAPER to a supported driver in Options → Preferences → Audio → Device.
 On Windows the ASIO driver must be the interface's own: ASIO4ALL and FlexASIO count as unsupported too. On an unsupported
 Windows driver (WASAPI, WaveOut, DirectSound, ASIO4ALL, FlexASIO, …) NovaInsert bypasses itself (the track plays dry) and
 shows "Audio driver not supported, NovaInsert is bypassed. Use the interface's own ASIO driver (not ASIO4ALL or FlexASIO)".
 
 **Validation.** macOS is validated on real hardware (a UA Apollo with analog outboard loops). Windows is validated on real hardware with an RME Babyface Pro on its native ASIO driver and analog cable loops (latency measurement at buffer sizes 64 to 512, delay compensation changes, online render, fault handling); other ASIO interfaces and outboard have not been tested yet, and reports are welcome. Linux is functionally
 validated in a virtual environment; hardware timing validation pending (beta). Reports from real ALSA interfaces are welcome.
+
+**JACK and PipeWire on Linux (beta).** NovaInsert also arms on REAPER's JACK driver, which includes PipeWire's JACK layer
+(`pipewire-jack`, so REAPER on a PipeWire desktop needs no ALSA switch). The panel then shows "JACK (beta): re-calibrate
+after changing JACK connections". Three things differ from ALSA:
+- JACK tells REAPER nothing about the interface behind the graph, so NovaInsert cannot tell whether a project's saved
+  latency still belongs to the same hardware. On JACK every instance measures its loop whenever a project opens, whatever
+  the SETUP "On project open" box says, and a failed measurement is never replaced by the saved latency.
+- NovaInsert's channel numbers are REAPER's JACK ports (`REAPER:out11`, `REAPER:in9`, …). Where they lead is up to your
+  JACK connections (REAPER's auto-connect, qpwgraph, Carla, a session manager). Set the connections up before you
+  calibrate, and press RE-CALIBRATION after you change one: NovaInsert does not see a re-patch.
+- PipeWire may change its buffer size (quantum) or sample rate when another application asks for one. NovaInsert
+  re-measures when REAPER reports such a change; to avoid it, fix the quantum and rate (for example
+  `pw-metadata -n settings 0 clock.force-quantum 256` and `clock.force-rate 48000`).
+JACK has been tested only on a virtual JACK server so far, not with a real interface. Reports (with the diagnostics CSV)
+are welcome.
 
 ## Install
 
@@ -99,7 +114,8 @@ validated in a virtual environment; hardware timing validation pending (beta). R
    [release page](https://github.com/aftec1570/novainsert/releases/latest); check it with `sha256sum -c *.sha256`.
 2. `tar xzf NovaInsert-1.3.0-Linux-x86_64.tar.gz && ./install.sh` copies the plug-in to `~/.vst3` (no sudo). For all
    users, copy `NovaInsert.vst3` to `/usr/lib/vst3/` instead.
-3. In REAPER: select the ALSA driver and a specific device, then Options → Preferences → Plug-ins → VST → "Re-scan".
+3. In REAPER: select the ALSA driver and a specific device (or JACK, beta, see "JACK and PipeWire on Linux"), then
+   Options → Preferences → Plug-ins → VST → "Re-scan".
 
 ## First use: define your devices
 
@@ -292,7 +308,7 @@ pass have no hardware return yet. NovaInsert reports the gap instead of hiding i
 ## Limitations of version 1.3.0
 
 - 44.1, 48, 88.2, 96 or 192 kHz (hardware-validated on the Apollo at all five; change the rate only with the transport stopped, every loop then re-measures on its own), REAPER 7.6 or newer (tested on 7.83, 7.84, 7.85 and 7.86), VST3 only.
-- macOS Apple silicon, Windows x64 and Linux x86_64 only. CoreAudio (macOS), ASIO (Windows) and ALSA (Linux) only.
+- macOS Apple silicon, Windows x64 and Linux x86_64 only. CoreAudio (macOS), ASIO (Windows) and ALSA (Linux) only, plus JACK / PipeWire-JACK on Linux as a beta (tested on a virtual JACK server only).
 - Windows is validated on one interface (RME Babyface Pro) with cable loops; other ASIO interfaces are untested. The zip is not code-signed.
 - Linux is functionally validated in a virtual environment; hardware timing validation pending (beta).
 - Presets are stored by position: deleting one shifts the later ones in projects not reopened since.

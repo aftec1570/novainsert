@@ -58,7 +58,7 @@ inline std::string reasonText(engine::Reason r)
 #if defined(_WIN32)
         case R::DriverUnsupported: return "Audio driver not supported, NovaInsert is bypassed. Use the interface's own ASIO driver (not ASIO4ALL or FlexASIO)";
 #else
-        case R::DriverUnsupported: return "REAPER's audio driver is not supported. NovaInsert needs ASIO on Windows / ALSA on Linux";
+        case R::DriverUnsupported: return "REAPER's audio driver is not supported. NovaInsert needs ASIO on Windows / ALSA or JACK on Linux";
 #endif
         case R::SampleRateChange: return "Sample rate changed";
         case R::ChannelNotDelivered: return "REAPER delivers no audio on this preset's channel. Enable it in Preferences > Audio > Device (input/output range)";
@@ -127,6 +127,7 @@ struct ViewInputs
     std::string hostVersion;                   // GetAppVersion(), e.g. "7.83/macOS-arm64"; empty = unknown
     std::string driverMode;                    // GetAudioDeviceInfo("MODE") (1.1.0 driver gate)
     bool driverOverride = false;               // allowAnyDriver let an unsupported driver through (test setups only)
+    bool driverBeta = false;                   // JACK on Linux (beta, user 2026-11-15): armed, re-measured on every open
     std::string missingChannel;                // ChannelNotDelivered: the 1-based channel REAPER does not deliver, e.g. "input 25"
     // Level CAL / VU (VU GUI spec 2026-11-02)
     bool sendStereo = false, retStereo = false;        // effective widths (what the loop, meters and readouts run on)
@@ -255,6 +256,7 @@ struct ViewModel
         }
         if (in.reason == engine::Reason::DriverUnsupported) vm.warnings.push_back("Audio driver: " + in.driverMode);
         if (in.driverOverride) vm.warnings.push_back("TEST DRIVER: " + in.driverMode);
+        if (in.driverBeta) vm.warnings.push_back("JACK (beta): re-calibrate after changing JACK connections");
         if (in.reason == engine::Reason::ChannelNotDelivered && !in.missingChannel.empty())
             vm.warnings.push_back("Not delivered by REAPER: " + in.missingChannel);
         for (const auto& t : in.anticipativeViolationTracks) vm.warnings.push_back("Anticipative FX re-enabled on " + t);

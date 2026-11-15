@@ -104,20 +104,29 @@ bool isDefaultDeviceName(const std::string& ident) noexcept
     return ident.empty() || ident == "<default>" || ident == "CoreAudio Default" || ident == "ALSA default";
 }
 
-DriverVerdict driverVerdict(const std::string& mode) noexcept
+DriverVerdict driverVerdictFor(const std::string& mode, std::string_view supported, std::string_view beta) noexcept
 {
     const auto b = mode.find_first_not_of(" \t");
     if (b == std::string::npos) return DriverVerdict::Unknown;
     const auto e = mode.find_first_of(" \t", b);
     const std::string_view token(mode.data() + b, (e == std::string::npos ? mode.size() : e) - b);
-    const std::string_view want(platform::kSupportedDriver);
-    if (token.size() != want.size()) return DriverVerdict::Unsupported;
-    for (size_t i = 0; i < want.size(); ++i)
-    {
-        const auto lc = [](char c) { return c >= 'A' && c <= 'Z' ? static_cast<char>(c - 'A' + 'a') : c; };
-        if (lc(token[i]) != lc(want[i])) return DriverVerdict::Unsupported;
-    }
-    return DriverVerdict::Supported;
+    const auto same = [token](std::string_view want) {
+        if (want.empty() || token.size() != want.size()) return false;
+        for (size_t i = 0; i < want.size(); ++i)
+        {
+            const auto lc = [](char c) { return c >= 'A' && c <= 'Z' ? static_cast<char>(c - 'A' + 'a') : c; };
+            if (lc(token[i]) != lc(want[i])) return false;
+        }
+        return true;
+    };
+    if (same(supported)) return DriverVerdict::Supported;
+    if (same(beta)) return DriverVerdict::Beta;
+    return DriverVerdict::Unsupported;
+}
+
+DriverVerdict driverVerdict(const std::string& mode) noexcept
+{
+    return driverVerdictFor(mode, platform::kSupportedDriver, platform::kBetaDriver);
 }
 
 std::string genericAsioWrapper(const std::string& s)

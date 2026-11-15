@@ -35,6 +35,14 @@ inline constexpr const char* kSupportedDriver = "ASIO";
 #else
 inline constexpr const char* kSupportedDriver = "ALSA";
 #endif
+// A second driver family the build arms on as a beta (user 2026-11-15): JACK on Linux, which includes PipeWire's JACK layer.
+// REAPER reports MODE "JACK" and IDENT "JackIn" / "JackOut" whatever interface sits behind the graph, so a JACK key never
+// identifies the hardware (docs/port/driver-identity.md). Empty = none.
+#if defined(__linux__)
+inline constexpr const char* kBetaDriver = "JACK";
+#else
+inline constexpr const char* kBetaDriver = "";
+#endif
 // Windows only (user 2026-11-12): ASIO4ALL / FlexASIO count as unsupported, and an unsupported driver bypasses the instance
 // (dry pass-through) instead of the silent fallback. macOS and Linux keep the 1.2.0 behaviour.
 #if defined(_WIN32)

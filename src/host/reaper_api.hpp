@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <functional>
 #include <string>
+#include <string_view>
 #include <vector>
 #include "host/reaper_types.hpp"
 
@@ -87,9 +88,12 @@ struct DeviceKey
 DeviceKey readDeviceKey(const ReaperApi& api);
 
 // Driver gate (spec 2026-11-09 §4): the first whitespace-delimited token of MODE against platform::kSupportedDriver,
-// case-insensitive. An empty MODE (macOS reports none) is Unknown and passes.
-enum class DriverVerdict { Supported, Unknown, Unsupported };
+// case-insensitive. An empty MODE (macOS reports none) is Unknown and passes. Beta: the token matches platform::kBetaDriver
+// (JACK on Linux): the instance arms, but the device key names no hardware, so a saved latency is never reused.
+enum class DriverVerdict { Supported, Unknown, Unsupported, Beta };
 DriverVerdict driverVerdict(const std::string& mode) noexcept;
+// The same rule against explicit families (testable on every platform); `beta` may be empty.
+DriverVerdict driverVerdictFor(const std::string& mode, std::string_view supported, std::string_view beta) noexcept;
 
 // Generic ASIO wrappers (ASIO4ALL, FlexASIO) layer ASIO over the Windows WDM/WASAPI stack: REAPER reports them as ASIO, but
 // their buffers and latency are not the interface's own (user 2026-11-12: such a driver gets a warning and a bypass).
