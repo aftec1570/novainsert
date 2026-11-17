@@ -1,6 +1,8 @@
 #include "plugin/library.hpp"
-#include "host/platform.hpp"
 #include <algorithm>
+#include <chrono>
+#include <thread>
+#include "host/platform.hpp"
 #include "plugin/library_json.hpp"
 
 namespace ni::plugin
@@ -36,9 +38,17 @@ bool writeJson(const fs::path& p, const juce::var& v)
                                             + std::to_string(counter.fetch_add(1)));
     const juce::File t(juce::String(tmp.string()));
     if (!t.replaceWithText(juce::JSON::toString(v))) { std::error_code ec; fs::remove(tmp, ec); return false; }
+    // Windows refuses to replace a file another process holds open without delete sharing (an antivirus scan, the search
+    // indexer, another instance re-reading the file): such a handle lives for milliseconds, so the rename is retried for up
+    // to ~250 ms before the save counts as failed. POSIX rename never fails this way; the first attempt decides there.
     std::error_code ec;
-    fs::rename(tmp, p, ec);
-    if (ec) { fs::remove(tmp, ec); return false; }
+    for (int attempt = 0, waitMs = 5; ; ++attempt, waitMs = std::min(waitMs * 2, 80))
+    {
+        fs::rename(tmp, p, ec);
+        if (!ec || attempt >= 6) break;
+        std::this_thread::sleep_for(std::chrono::milliseconds(waitMs));   // 5+10+20+40+80+80 ms
+    }
+    if (ec) { std::error_code rm; fs::remove(tmp, rm); return false; }
     return true;
 }
 

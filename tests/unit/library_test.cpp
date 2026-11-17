@@ -3,6 +3,9 @@
 #include <catch2/catch_test_macros.hpp>
 #include <filesystem>
 #include <fstream>
+#include <chrono>
+#include <memory>
+#include <thread>
 #include "plugin/library.hpp"
 
 using namespace ni::plugin;
@@ -190,6 +193,30 @@ TEST_CASE("library_atomic_write_no_partial_file")
     juce::var v;
     REQUIRE(juce::JSON::parse(juce::String(readFile(d / "devices.json")), v).wasOk());
     REQUIRE(v["devices"].getArray()->size() == 7);
+}
+
+TEST_CASE("library_write_survives_a_briefly_held_target_file (Windows rename vs an open handle)")
+{
+    // Windows refuses to replace a file another process holds open without delete sharing (an antivirus scan, the search
+    // indexer, another instance re-reading devices.json); the CRT's ifstream opens exactly that way. The atomic write must
+    // retry instead of failing the save (Windows flake of library_atomic_write_no_partial_file, 2026-11-17).
+    const auto d = tempDir("held");
+    DeviceLibrary lib(d);
+    lib.load();
+    REQUIRE(lib.upsertDevice(rec("a", "first")));
+    std::thread holder;
+    {
+        auto in = std::make_shared<std::ifstream>(d / "devices.json");
+        REQUIRE(in->is_open());
+        holder = std::thread([in] { std::this_thread::sleep_for(std::chrono::milliseconds(60)); in->close(); });
+        DeviceRecord r = rec("b", "second");
+        REQUIRE(lib.upsertDevice(r));   // replaced while the handle is still open for the first 60 ms
+    }
+    holder.join();
+    for (const auto& e : fs::directory_iterator(d)) REQUIRE(e.path().string().find(".tmp") == std::string::npos);
+    DeviceLibrary again(d);
+    again.load();
+    REQUIRE(again.device("b").has_value());
 }
 
 TEST_CASE("library_device_record_round_trips_all_fields")

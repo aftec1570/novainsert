@@ -16,6 +16,7 @@ Latest version: [download](https://github.com/aftec1570/novainsert/releases/late
 | 7 | 2026-11-14 | A stereo unit with channels half a sample apart fails with "Channel asymmetry" now and then | Fixed | 1.3.0 |
 | 8 | 2026-11-14 | "Unvalidated host version 7.84/x64" reads like an error | Changed | 1.3.0 |
 | 9 | 2026-11-14 | "No signal returned from the hardware" on Windows (TC Konnekt x32 ASIO, dCS converters) where ReaInsert works | Awaiting diagnostics | |
+| 10 | 2026-11-17 | Windows: saving a preset or calibration can fail with "write failed" now and then | Fixed | 1.4.2 |
 
 ## #1 – Mouse wheel direction on trim knobs is reversed
 
@@ -120,3 +121,18 @@ Latest version: [download](https://github.com/aftec1570/novainsert/releases/late
 - **Verified:** two new unit tests (measuring while playing locks the click; play starting during the settle silences the
   send), failing before the fix and passing after it; full unit suite on release, debug and ASan builds; live in REAPER on
   BlackHole and on the UA Apollo bench.
+
+## #10 – Windows: saving a preset or calibration can fail with "write failed" now and then
+
+- **Reported:** 2026-11-17, found by the Windows unit tests (an intermittent failure of the atomic-write test since 1.2.0).
+- **Symptom:** a save of `devices.json`, `settings.json` or the calibrations file is refused with "device not saved: write
+  failed" (or the settings / calibration equivalent), rarely and not reproducibly. macOS and Linux are not affected.
+- **Root cause:** NovaInsert writes a temporary file and renames it over the old one, so no half-written file is ever
+  visible. Windows refuses that rename while another process holds the old file open without delete sharing: an antivirus
+  scan, the search indexer, or another NovaInsert instance re-reading the file. Such a handle lives for milliseconds, and
+  the save gave up on the first refusal.
+- **Fix (1.4.2):** the rename is retried for up to about a quarter of a second (5, 10, 20, 40, 80, 80 ms) before the save counts
+  as failed. Nothing else changes: the write stays atomic, and a refusal that persists still reports the failure.
+- **Verified:** a new unit test holds the file open for 60 ms during a save: it failed on Windows before the fix and
+  passes after it; the full suite passed 5 of 5 parallel runs on Windows (428 tests), and on macOS (release, debug, ASan,
+  TSan) and Linux.

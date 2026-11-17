@@ -10,7 +10,13 @@ h1{font-size:28px;letter-spacing:.02em;margin:0 0 12px} h2{font-size:19px;margin
 a{color:var(--accent)} code{font:14px ui-monospace,Menlo,monospace} li{margin:6px 0} p:first-of-type{color:var(--dim)}
 </style></head><body><main>
 <h1>NovaInsert – version history</h1>
-<p>Latest version: <strong>1.4.1</strong> · <a href="https://github.com/aftec1570/novainsert/releases/latest">Download the latest release (macOS DMG, Windows zip, Linux tar.gz)</a> · <a href="https://github.com/aftec1570/novainsert/releases">All releases</a> · <a href="https://github.com/aftec1570/novainsert/blob/main/BUGS.md">Bug and fix ledger</a></p>
+<p>Latest version: <strong>1.4.2</strong> · <a href="https://github.com/aftec1570/novainsert/releases/latest">Download the latest release (macOS DMG, Windows zip, Linux tar.gz)</a> · <a href="https://github.com/aftec1570/novainsert/releases">All releases</a> · <a href="https://github.com/aftec1570/novainsert/blob/main/BUGS.md">Bug and fix ledger</a></p>
+<h2>1.4.2 – 2026-11-17</h2>
+<p>Bug-fix release for Windows; macOS and Linux behave as in 1.4.1. Projects, presets, calibrations and settings load unchanged.</p>
+<ul>
+<li><strong>Fix (Windows):</strong> saving a preset, a setting or a calibration could fail now and then with "write failed" when another program (an antivirus scan, the search indexer, another NovaInsert instance) had the file open for a moment. The save now waits up to a quarter of a second for the file instead of giving up (<a href="https://github.com/aftec1570/novainsert/blob/main/BUGS.md">BUGS.md #10</a>).</li>
+<li>Validation: a new unit test holds the file open during a save (failed on Windows before the fix); the full unit suite on Windows, macOS and Linux.</li>
+</ul>
 <h2>1.4.1 – 2026-11-17</h2>
 <p>Release for macOS, Windows and Linux. Projects, presets, calibrations and settings from 1.3.0 (and the 1.4beta pre-release) load unchanged.</p>
 <ul>

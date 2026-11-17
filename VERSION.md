@@ -1,7 +1,17 @@
 # NovaInsert – version history
 
-Latest version: **1.4.1** · [Download the latest release (macOS DMG, Windows zip, Linux tar.gz)](https://github.com/aftec1570/novainsert/releases/latest) ·
+Latest version: **1.4.2** · [Download the latest release (macOS DMG, Windows zip, Linux tar.gz)](https://github.com/aftec1570/novainsert/releases/latest) ·
 [All releases](https://github.com/aftec1570/novainsert/releases) · [Bug and fix ledger](BUGS.md)
+
+## 1.4.2 – 2026-11-17
+
+Bug-fix release for Windows; macOS and Linux behave as in 1.4.1. Projects, presets, calibrations and settings load unchanged.
+
+- **Fix (Windows):** saving a preset, a setting or a calibration could fail now and then with "write failed" when another
+  program (an antivirus scan, the search indexer, another NovaInsert instance) had the file open for a moment. The save
+  now waits up to a quarter of a second for the file instead of giving up ([BUGS.md #10](BUGS.md)).
+- Validation: a new unit test holds the file open during a save (failed on Windows before the fix); the full unit suite
+  on Windows, macOS and Linux.
 
 ## 1.4.1 – 2026-11-17
 
