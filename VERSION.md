@@ -1,7 +1,41 @@
 # NovaInsert – version history
 
-Latest version: **1.3.0** · [Download the latest release (macOS DMG, Windows zip, Linux tar.gz)](https://github.com/aftec1570/novainsert/releases/latest) ·
+Latest version: **1.4.1** · [Download the latest release (macOS DMG, Windows zip, Linux tar.gz)](https://github.com/aftec1570/novainsert/releases/latest) ·
 [All releases](https://github.com/aftec1570/novainsert/releases) · [Bug and fix ledger](BUGS.md)
+
+## 1.4.1 – 2026-11-17
+
+Release for macOS, Windows and Linux. Projects, presets, calibrations and settings from 1.3.0 (and the 1.4beta pre-release)
+load unchanged.
+
+- **New: bypassing an instance hands its channels to an instance waiting for them** (forum request). Example: the drums
+  were compressed in stereo and printed; bypass that instance and the vocal and guitar instances using the compressor's
+  left and right channels as mono presets take over and measure within about a second; the bypassed instance keeps its
+  device. Un-bypassed, it claims the channels back once they are free and measures again. A bypass with nobody waiting
+  changes nothing, so A/B bypassing never re-measures.
+- **Fix:** when a stereo instance released its channels, only one of two waiting mono instances (left or right) got them;
+  now both do.
+- **New on Linux (beta feature): JACK and PipeWire-JACK**, from the 1.4beta pre-release. NovaInsert arms on REAPER's JACK
+  driver, including PipeWire's JACK layer. JACK names no hardware, so every loop is measured whenever a project opens and a
+  saved latency is never used as a fallback; re-calibrate after changing JACK connections (the panel says "JACK (beta)").
+  Tested on a virtual JACK server only.
+- Validation: unit tests on all three platforms; the bypass handover scenario on the Windows bench (RME Babyface Pro, cable
+  loops), the Apollo bench (SSL EQ, macOS) and the Linux virtual JACK loop; the Linux tier B suite passes.
+
+## 1.4beta – 2026-11-15 (Linux pre-release)
+
+Pre-release for Linux testers; macOS and Windows stay on 1.3.0 (no change for them). Same projects, presets and settings
+as 1.3.0.
+
+- **New (beta): JACK and PipeWire-JACK on Linux.** NovaInsert arms on REAPER's JACK driver, including PipeWire's JACK
+  layer, so REAPER on a PipeWire desktop no longer has to be switched to ALSA. JACK names no hardware, so on JACK every
+  loop is measured whenever a project opens and a saved latency is never used as a fallback; re-calibrate after changing
+  JACK connections (README "JACK and PipeWire on Linux").
+- **A beta build says so:** the editor footer reads "BETA BUILD – not a production release" in amber. It installs as the
+  same NovaInsert plug-in and replaces the installed 1.3.0; reinstall 1.3.0 to go back. (The first upload, "1.4.0-beta.1",
+  only showed the version number; please use 1.4beta.)
+- Validation: the Linux tier B suite on a virtual JACK server (measure, delay compensation, render, faults, multi-instance)
+  passes; no real interface and no PipeWire system tested yet.
 
 ## 1.3.0 – 2026-11-14
 

@@ -16,9 +16,10 @@ class PluginIdentity(unittest.TestCase):
     def test_bundle_identifier(self):
         with open(BUNDLE / "Contents/Info.plist", "rb") as f: self.assertEqual(plistlib.load(f)["CFBundleIdentifier"], BUNDLE_ID)
     def test_bundle_version_is_the_release_version(self):
-        self.assertEqual(VERSION, "1.3.0")
+        self.assertEqual(VERSION, "1.4.1")
+        num = re.match(r"[0-9.]+", VERSION).group(0).rstrip(".")   # a pre-release ("1.4beta") keeps the numeric CMake version
         with open(BUNDLE / "Contents/Info.plist", "rb") as f: info = plistlib.load(f)
-        self.assertEqual((info["CFBundleShortVersionString"], info["CFBundleVersion"]), (VERSION, VERSION))
+        for v in (info["CFBundleShortVersionString"], info["CFBundleVersion"]): self.assertTrue(v.startswith(num), v)
     def test_class_ids_unchanged_so_saved_projects_load(self):
         self.assertEqual(set(re.findall(r'"CID": "([0-9A-F]{32})"', self.info)), CIDS)
     def test_no_old_publisher_name_in_the_bundle(self):

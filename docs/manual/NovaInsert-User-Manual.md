@@ -1,12 +1,12 @@
 # NovaInsert User Manual
 
-Version 1.3.0 · November 2026 · REAPER-only VST3 hardware insert for macOS (Apple silicon) · by Hillside Studios, [hillsidestudio.io](https://hillsidestudio.io)
+Version 1.4.1 · November 2026 · REAPER-only VST3 hardware insert for macOS (Apple silicon) · by Hillside Studios, [hillsidestudio.io](https://hillsidestudio.io)
 
 ![NovaInsert in REAPER](img/reaper_window.png)
 
 NovaInsert puts a piece of outboard gear into a REAPER track like any other plug-in. It sends the track to a physical output of your audio interface, takes the return from a physical input, measures the exact round-trip delay through the converters, cables and the device itself, and tells REAPER that delay so the return lines up to the sample. It also keeps the analog levels where the outboard expects them, with VU meters, trims and a one-press level calibration.
 
-This manual covers version 1.3.0. The plug-in is free to use and comes as is, without any warranty. Read the safety notice in chapter 2 before you connect anything.
+This manual covers version 1.4.1. The plug-in is free to use and comes as is, without any warranty. Read the safety notice in chapter 2 before you connect anything.
 
 ## 1. What NovaInsert does
 
@@ -43,7 +43,7 @@ You are responsible for the routing, the monitoring level and the hardware. See 
 
 **Install from the DMG**
 
-1. Open the DMG and double-click "Install NovaInsert 1.3.0.pkg".
+1. Open the DMG and double-click "Install NovaInsert 1.4.1.pkg".
 2. Read and accept the license agreement, then let the installer copy the plug-in to `/Library/Audio/Plug-Ins/VST3`.
 3. The package is signed with an Apple Developer ID and notarized by Apple, so macOS opens it directly without a security prompt.
 4. In REAPER open Options, Preferences, Plug-ins, VST and press "Re-scan". Add "VST3: NovaInsert" to a track.
@@ -323,6 +323,7 @@ Hardware cannot run faster than real time, so a render through NovaInsert must b
 ## 14. Several devices in one project
 
 - Each physical channel has one owner. A second instance that selects a record sharing an output or an input with a running instance shows "Unavailable" and "Device in use by <track>", stays muted and does not measure. When the owner changes device or is removed, the waiting instance measures and takes over.
+- Bypassing the owner (its FX enable box, or the track's whole FX chain) also hands the channels over when that lets a waiting instance run (if the waiting instance also needs channels another, active instance holds, nothing changes until that one is bypassed too). The bypassed instance keeps its device and shows "Bypassed: device handed to the instance waiting for it". Example: the drums were compressed in stereo and printed; bypass that instance and the vocal and guitar instances using the compressor's left and right channels as mono presets take over and measure. When you un-bypass the drums instance it claims the channels back as soon as they are free and measures again; until then it waits like any other conflict. A bypass with nobody waiting changes nothing: the instance keeps its channels and its latency, so A/B comparisons never re-measure. The handover happens within about a second.
 - Measurements of different units run in parallel. If a click is disturbed by a neighbour's click, the attempt is rejected and repeated alone.
 - Loading a project with many instances queues them; the lamp shows "Queued" with the position.
 - The same record twice on different, free channels is allowed with a warning.
@@ -382,6 +383,7 @@ The snapshot means a later edit of the library cannot change how an old project 
 | Sample rate changed | the device rate changed | nothing: the latency check runs again on its own, and a calibration stored for that rate is reused. Change the rate only while stopped, never during playback or recording |
 | Select a specific audio device, not <default> | REAPER uses the system default device | pick the interface by name in REAPER's audio device settings |
 | Another instance uses this device | channel conflict | wait, or change one of the records |
+| Bypassed: device handed to the instance waiting for it. Un-bypass to claim it back | this instance is bypassed and another one took its channels | un-bypass it; it measures again once the channels are free |
 | Measurement paused while recording | a measurement was due during recording | it resumes when recording stops |
 | Anticipative FX processing is on for this track | you re-enabled it | press RE-APPLY ANTICIPATIVE FX |
 | Audio device lost | REAPER lost the interface | reconnect; the instance re-measures when it returns |
@@ -394,7 +396,7 @@ The snapshot means a later edit of the library cannot change how an old project 
 | Loop gain outside the trim range | the return differs from the send by more than the trims can correct | check the unit's gain structure |
 | CAL needs Insert mode / is not available while recording / Select a free device first / Wait for the latency measurement | CAL preconditions | see chapter 9 |
 
-## 19. Limitations of version 1.3.0
+## 19. Limitations of version 1.4.1
 
 - 44.1, 48, 88.2, 96 or 192 kHz (hardware-validated on the Apollo at all five; change the rate only with the transport stopped, every loop then re-measures on its own), REAPER 7.6 or newer (tested on 7.83, 7.84, 7.85 and 7.86), macOS Apple silicon, VST3 only.
 - Presets are stored by position: deleting one shifts the later ones in projects that have not been reopened since (chapter 4).

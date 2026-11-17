@@ -66,8 +66,9 @@ SnapshotDiff compare(const InstanceState& s, const DeviceLibrary& lib)
     return SnapshotDiff::Same;
 }
 
-RestoreAction restoreAction(const InstanceState& s, const engine::CalibKey& current, bool measureOnOpen)
+RestoreAction restoreAction(const InstanceState& s, const engine::CalibKey& current, bool measureOnOpen, bool identityVerified)
 {
+    if (! identityVerified) return RestoreAction::Remeasure;
     if (s.calibSnapshot && s.calibSnapshot->result.failReason == engine::Reason::None && s.calibSnapshot->key == current)
         return measureOnOpen ? RestoreAction::MeasureKeepSnapshot : RestoreAction::ApplySnapshot;
     return RestoreAction::Remeasure;

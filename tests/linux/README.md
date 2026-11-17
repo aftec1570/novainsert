@@ -52,8 +52,9 @@ connection. A keeper reacting to JACK's port-registration callback needed ~10 ms
 pairs), so renders with many outboard channels started with late channels (F0.6 `load20`: 13 of 21 pairs 1–8 blocks
 late). REAPER's auto-connect runs inside its device open, before audio starts: every render exact.
 
-- NovaInsert's driver gate rejects JACK, so the harness sets `allowAnyDriver` (`NI_ALLOW_ANY_DRIVER=1`); S1
-  `driver_gate` checks the rejection itself. The positive ALSA gate check is `--device-snd` (`--device /dev/snd
+- JACK arms as a beta since 2026-11-15 (MODE `JACK`, IDENT `JackIn` / `JackOut`); the harness still sets `allowAnyDriver`
+  (`NI_ALLOW_ANY_DRIVER=1`) for the F0 spike plug-ins. S1 `driver_gate` checks the rejection on Dummy Audio, `jack_beta` the
+  beta on JACK without the override. On JACK a restored project always re-measures. The positive ALSA gate check is `--device-snd` (`--device /dev/snd
   --group-add 18`, `alsa_*dev=default`: the Mac's default audio device through virtio; the project is silent).
 - `NI_JACKD_OPTS=-S` (synchronous mode) and the RT flags (`SYS_NICE`, `rtprio`, `memlock`) keep the dummy graph stable.
 - The JACK dummy period is a VM timer (jackd logs `XRun = 5..13 usec` late wake-ups nearly every cycle): F0.2 late cycles

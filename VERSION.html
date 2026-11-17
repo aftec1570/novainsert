@@ -10,7 +10,22 @@ h1{font-size:28px;letter-spacing:.02em;margin:0 0 12px} h2{font-size:19px;margin
 a{color:var(--accent)} code{font:14px ui-monospace,Menlo,monospace} li{margin:6px 0} p:first-of-type{color:var(--dim)}
 </style></head><body><main>
 <h1>NovaInsert – version history</h1>
-<p>Latest version: <strong>1.3.0</strong> · <a href="https://github.com/aftec1570/novainsert/releases/latest">Download the latest release (macOS DMG, Windows zip, Linux tar.gz)</a> · <a href="https://github.com/aftec1570/novainsert/releases">All releases</a> · <a href="https://github.com/aftec1570/novainsert/blob/main/BUGS.md">Bug and fix ledger</a></p>
+<p>Latest version: <strong>1.4.1</strong> · <a href="https://github.com/aftec1570/novainsert/releases/latest">Download the latest release (macOS DMG, Windows zip, Linux tar.gz)</a> · <a href="https://github.com/aftec1570/novainsert/releases">All releases</a> · <a href="https://github.com/aftec1570/novainsert/blob/main/BUGS.md">Bug and fix ledger</a></p>
+<h2>1.4.1 – 2026-11-17</h2>
+<p>Release for macOS, Windows and Linux. Projects, presets, calibrations and settings from 1.3.0 (and the 1.4beta pre-release) load unchanged.</p>
+<ul>
+<li><strong>New: bypassing an instance hands its channels to an instance waiting for them</strong> (forum request). Example: the drums were compressed in stereo and printed; bypass that instance and the vocal and guitar instances using the compressor's left and right channels as mono presets take over and measure within about a second; the bypassed instance keeps its device. Un-bypassed, it claims the channels back once they are free and measures again. A bypass with nobody waiting changes nothing, so A/B bypassing never re-measures.</li>
+<li><strong>Fix:</strong> when a stereo instance released its channels, only one of two waiting mono instances (left or right) got them; now both do.</li>
+<li><strong>New on Linux (beta feature): JACK and PipeWire-JACK</strong>, from the 1.4beta pre-release. NovaInsert arms on REAPER's JACK driver, including PipeWire's JACK layer. JACK names no hardware, so every loop is measured whenever a project opens and a saved latency is never used as a fallback; re-calibrate after changing JACK connections (the panel says "JACK (beta)"). Tested on a virtual JACK server only.</li>
+<li>Validation: unit tests on all three platforms; the bypass handover scenario on the Windows bench (RME Babyface Pro, cable loops), the Apollo bench (SSL EQ, macOS) and the Linux virtual JACK loop; the Linux tier B suite passes.</li>
+</ul>
+<h2>1.4beta – 2026-11-15 (Linux pre-release)</h2>
+<p>Pre-release for Linux testers; macOS and Windows stay on 1.3.0 (no change for them). Same projects, presets and settings as 1.3.0.</p>
+<ul>
+<li><strong>New (beta): JACK and PipeWire-JACK on Linux.</strong> NovaInsert arms on REAPER's JACK driver, including PipeWire's JACK layer, so REAPER on a PipeWire desktop no longer has to be switched to ALSA. JACK names no hardware, so on JACK every loop is measured whenever a project opens and a saved latency is never used as a fallback; re-calibrate after changing JACK connections (README "JACK and PipeWire on Linux").</li>
+<li><strong>A beta build says so:</strong> the editor footer reads "BETA BUILD – not a production release" in amber. It installs as the same NovaInsert plug-in and replaces the installed 1.3.0; reinstall 1.3.0 to go back. (The first upload, "1.4.0-beta.1", only showed the version number; please use 1.4beta.)</li>
+<li>Validation: the Linux tier B suite on a virtual JACK server (measure, delay compensation, render, faults, multi-instance) passes; no real interface and no PipeWire system tested yet.</li>
+</ul>
 <h2>1.3.0 – 2026-11-14</h2>
 <p>Feature release. Projects, presets (<code>devices.json</code>), calibrations and settings from 1.0.x to 1.2.1 load unchanged on every platform; a stored calibration stays valid at the rate it was measured at.</p>
 <ul>

@@ -97,6 +97,10 @@ TEST_CASE("persistence_snapshot_applied_without_remeasure_when_key_matches")
     REQUIRE(restoreAction(none, key(128)) == RestoreAction::Remeasure);
     InstanceState failed = s; failed.calibSnapshot->result.failReason = Reason::NoReturn;
     REQUIRE(restoreAction(failed, key(128)) == RestoreAction::Remeasure);
+    // a key that names no hardware (JACK, user 2026-11-15): never applied, never kept as the open fallback
+    REQUIRE(restoreAction(s, key(128), false, false) == RestoreAction::Remeasure);
+    REQUIRE(restoreAction(s, key(128), true, false) == RestoreAction::Remeasure);
+    REQUIRE(restoreAction(s, key(128), true, true) == RestoreAction::MeasureKeepSnapshot);
 
     StateMachine sm;   // the restore path: Idle → ApplyingLatency with StateRestore, then Locked via the observer
     sm.setKey(9);

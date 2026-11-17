@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Linux tier B in the novainsert-linux container: REAPER x86_64 headless under Xvfb, audio on a JACK dummy server whose
 # loopback driver (jackd -L 63) is the software loop (no snd-aloop in OrbStack, tests/linux/README.md).
-# NovaInsert's driver gate rejects JACK, so the harness sets allowAnyDriver (S1 `driver_gate` checks the rejection itself).
+# JACK arms as a beta since 2026-11-15; allowAnyDriver stays set for the spike runners (F0), and S1 `driver_gate` (Dummy Audio) / `jack_beta` check the gate itself.
 #
 # Host: docker run --rm --platform linux/amd64 --cap-add SYS_NICE --ulimit rtprio=95 --ulimit memlock=-1 \
 #         -v "$PWD":/work -w /work novainsert-linux tests/linux/run_tier_b.sh [options]
@@ -69,7 +69,7 @@ run() {   # run <name> <results dir> <command...>: the command gets --tag _<name
   [ "$r" = 0 ] || rc=1
 }
 
-S1="load1,load20,unload,sr44,sr176,driver_gate"; [ "$SND" = 1 ] && S1="$S1,default_device"
+S1="load1,load20,unload,sr44,sr176,driver_gate,jack_beta"; [ "$SND" = 1 ] && S1="$S1,default_device"
 BENCH=(python3 tests/f3/apollo/run_apollo.py --buffers "$BS" --scenarios "$SCEN")
 # F0.2 (hook <-> processBlock relation, the spike plugin; scenario A needs anticipative FX, the gate runs the _noant set)
 # F0.1 (REAPER API from a VST3, lifecycle; the bridge spike)

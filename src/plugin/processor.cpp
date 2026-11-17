@@ -147,7 +147,7 @@ void NovaInsertProcessor::releaseOwnership()
     coord_->scheduler().cancel (instNo_);
     coord_->hostSettings().release (instNo_);
     if (claimedDevice_ > 0) { coord_->pairs().release (instNo_); ni::host::DiagLog::get().text ("PAIR", instNo_, "release|device=%d", claimedDevice_); }
-    claimedDevice_ = -1; pairOwned_ = false; conflicted_ = false;
+    claimedDevice_ = -1; pairOwned_ = false; conflicted_ = false; yielded_ = false;
 }
 
 void NovaInsertProcessor::setIHostApplication (Steinberg::FUnknown* host)
@@ -256,6 +256,9 @@ void NovaInsertProcessor::onCoordinatorEvent (const ni::host::Coordinator::Event
         case Kind::Promoted:
             pairOwned_ = true; conflicted_ = false;
             ni::host::DiagLog::get().text ("PAIR", instNo_, "promoted|device=%d", claimedDevice_);
+            // bypassed before its own poll could take it out of the queue: hand the channels straight back, never measure
+            // bypassed (the registry collected its promotions before calling out, so the nested release is safe)
+            if (hostBypassed()) { yieldPair(); break; }
             setState (State::Idle, Reason::ConflictResolved);
             requestMeasure (Reason::ConflictResolved);
             break;
@@ -312,7 +315,7 @@ void NovaInsertProcessor::applyDeviceParameter()
     if (inst_ && inst_->active()) releaseLoop ("pair");
     if (claimedDevice_ > 0) { coord_->pairs().release (instNo_); ni::host::DiagLog::get().text ("PAIR", instNo_, "release|device=%d", claimedDevice_); }
     coord_->scheduler().cancel (instNo_);   // a request for the old pair must never start
-    claimedDevice_ = dev; pairOwned_ = false; conflicted_ = false; lastWarn_.clear();
+    claimedDevice_ = dev; pairOwned_ = false; conflicted_ = false; yielded_ = false; lastWarn_.clear();
     slotDirty_ = true; measureAfterDefaults_.reset();
     lastCalib_.reset(); runningRec_.reset(); openKept_.reset(); openFallbackOn_ = false;
     const bool restore = restore_.claim (dev) == ni::plugin::ProjectRestore::Claim::Restore;   // any other claim is the user's selection
@@ -379,9 +382,74 @@ void NovaInsertProcessor::syncSlot()
     const int idx = ni::host::chainIndexFromContext (reinterpret_cast<std::intptr_t> (reaperHost_->getReaperParent (6)));
     const std::string want = claimedDevice_ > 0 && runningRec_ ? runningRec_->name : std::string();
     const auto r = ni::host::syncSlotName (coord_->api(), track_, idx, want);
+    slotVerified_ = idx >= 0 && r != ni::host::SlotSync::NotOurs && r != ni::host::SlotSync::Unsupported;
     if (r == ni::host::SlotSync::Written || idx != lastSlotIdx_)
         ni::host::DiagLog::get().text ("SLOT", instNo_, "idx=%d|res=%d|name=%s", idx, static_cast<int> (r), want.c_str());
     lastSlotIdx_ = idx;
+}
+
+bool NovaInsertProcessor::hostBypassed() const
+{
+    if (! coord_ || track_ == nullptr) return false;
+    const auto& api = coord_->api();
+    // only at an index verified to hold a NovaInsert in the track's main chain: a wrong index must not read a neighbour, and an
+    // instance elsewhere (input FX, take FX) is not bypassed by the main chain's switch
+    if (! slotVerified_ || lastSlotIdx_ < 0) return false;
+    if (api.GetMediaTrackInfo_Value != nullptr && api.GetMediaTrackInfo_Value (track_, "I_FXEN") < 0.5) return true;   // whole chain bypassed
+    return api.TrackFX_GetEnabled != nullptr && ! api.TrackFX_GetEnabled (track_, lastSlotIdx_);
+}
+
+void NovaInsertProcessor::serviceBypass()
+{
+    if (! coord_ || claimedDevice_ <= 0 || ! runningRec_) return;
+    const bool bypassed = hostBypassed();
+    if (bypassed != bypassSeen_) { bypassSeen_ = bypassed; ni::host::DiagLog::get().text ("BYPASS", instNo_, "on=%d|owner=%d|waiting=%d|yielded=%d", bypassed ? 1 : 0, pairOwned_ ? 1 : 0, conflicted_ ? 1 : 0, yielded_ ? 1 : 0); }
+    coord_->pairs().setBypassed (instNo_, bypassed);   // before the check: the other bypassed owners read it too
+    const bool waitsOnMe = pairOwned_ && coord_->pairs().waiterFreedBy (instNo_);
+    switch (ni::engine::bypassAction (bypassed, yielded_, pairOwned_, conflicted_, waitsOnMe))
+    {
+        case ni::engine::BypassAction::Yield: yieldPair(); break;
+        case ni::engine::BypassAction::Resume: resumePair(); break;
+        case ni::engine::BypassAction::None: break;
+    }
+}
+
+void NovaInsertProcessor::yieldPair()
+{
+    const bool wasOwner = pairOwned_;
+    // hook I/O stops before the registry hands the pair over (release() promotes synchronously): never two writers (S3 review I2)
+    if (inst_ && inst_->active()) releaseLoop ("bypass");
+    coord_->scheduler().cancel (instNo_);
+    cancelMeasure (Reason::BypassYield);
+    // a project snapshot not yet applied is kept for saving (getStateInformation), so the project still carries its loop
+    if (! lastCalib_ && runningRec_) lastCalib_ = restore_.calibForSave (runningRec_->id);
+    restore_.dropPending(); measureAfterDefaults_.reset(); requeueAfterRecord_ = false;
+    yielded_ = true; pairOwned_ = false; conflicted_ = false;
+    setState (State::Unavailable, Reason::BypassYield);
+    ni::host::DiagLog::get().text ("PAIR", instNo_, "yield|device=%d|owner=%d", claimedDevice_, wasOwner ? 1 : 0);
+    coord_->pairs().release (instNo_);   // promotes every waiter now free
+}
+
+void NovaInsertProcessor::resumePair()
+{
+    yielded_ = false;
+    char name[256] = "";
+    if (track_ != nullptr && coord_->api().GetTrackName) coord_->api().GetTrackName (track_, name, sizeof (name));
+    if (coord_->pairs().claim (instNo_, pair_, name, runningRec_->id) == ni::host::Claim::Owner)
+    {
+        pairOwned_ = true;
+        ni::host::DiagLog::get().text ("PAIR", instNo_, "resume|device=%d", claimedDevice_);
+        setState (State::Idle, Reason::BypassResume);
+        requestMeasure (Reason::BypassResume);   // the loop was released: measure it again
+        evaluateHostState();               // a host block (device lost, undelivered channel) cancels it and holds the instance as usual
+    }
+    else
+    {
+        conflicted_ = true;
+        const auto owner = coord_->pairs().ownerTrackOf (pair_);
+        ni::host::DiagLog::get().text ("PAIR", instNo_, "conflict|device=%d|owner=%s|after=resume", claimedDevice_, owner ? owner->c_str() : "?");
+        setState (State::Unavailable, Reason::PairConflict);
+    }
 }
 
 void NovaInsertProcessor::parameterValueChanged (int parameterIndex, float)
@@ -405,6 +473,7 @@ void NovaInsertProcessor::pollHost()
     syncLibrary();   // presets deleted/edited by another instance realign this one even with its editor closed (final review H1)
     applyDeviceParameter();
     syncSlot();   // re-asserted: the slot is not renamable while NovaInsert runs (user 2026-11-02)
+    serviceBypass();   // after syncSlot: it uses the slot index just verified
     if (pairOwned_)
     {
         std::string w;
@@ -460,9 +529,15 @@ void NovaInsertProcessor::evaluateHostState (Reason trigger)
       for (const auto* s : { &key.mode, &key.identIn, &key.identOut })
         if (const auto w = ni::host::genericAsioWrapper (*s); ! w.empty()) { driverMode_ = key.mode.empty() ? w : key.mode + " (" + w + ")"; break; }
     driverOverride_ = false;
+    driverBeta_ = false;
     switch (ni::host::deviceDriverVerdict (key))
     {
         case ni::host::DriverVerdict::Supported: lastUnsupportedMode_.clear(); break;
+        case ni::host::DriverVerdict::Beta:
+            lastUnsupportedMode_.clear();
+            driverBeta_ = true;
+            if (! driverBetaLogged_) { driverBetaLogged_ = true; ni::host::DiagLog::get().text ("DRIVER_BETA", instNo_, "%s", driverMode_.c_str()); }
+            break;
         case ni::host::DriverVerdict::Unknown:
             lastUnsupportedMode_.clear();
             if (! driverUnknownLogged_) { driverUnknownLogged_ = true; ni::host::DiagLog::get().text ("DRIVER_UNKNOWN", instNo_, "mode="); }
@@ -495,6 +570,7 @@ void NovaInsertProcessor::evaluateHostState (Reason trigger)
     if (coord_->hooks().deviceLostNow()) { setState (State::Unavailable, Reason::DeviceLost); return; }
     if (state() == State::Unavailable && lastReason_ == Reason::DeviceLost && trigger == Reason::None) trigger = Reason::DeviceReturned;
     if (antViolation_) { setState (State::UnsupportedHost, Reason::AnticipativeOn); return; }
+    if (yielded_) { setState (State::Unavailable, Reason::BypassYield); return; }   // bypassed, channels handed over
     if (conflicted_) { setState (State::Unavailable, Reason::PairConflict); return; }
     // REAPER can report channels it does not deliver (inputs outside the device's enabled range): an instance whose own loop
     // channel is one of them says so instead of measuring silence (forum report 2026-11-12, Yamaha Steinberg FW ASIO).
@@ -781,7 +857,7 @@ void NovaInsertProcessor::serviceMeasurer()
             const int32_t sp = snap ? snap->result.physLoop[0] : -1;
             const bool inRange = sp >= 0 && sp <= ni::engine::kLMax - 2 * loopCfg_.B;   // same bound as a measured result (review M1)
             const bool onOpen = library_ ? library_->settings().measureOnOpen : true;
-            const auto action = key && inRange ? ni::plugin::restoreAction (*pending, *key, onOpen) : ni::plugin::RestoreAction::Remeasure;
+            const auto action = key && inRange ? ni::plugin::restoreAction (*pending, *key, onOpen, ! driverBeta_) : ni::plugin::RestoreAction::Remeasure;
             const bool apply = action == ni::plugin::RestoreAction::ApplySnapshot;
             if (action == ni::plugin::RestoreAction::MeasureKeepSnapshot) openKept_ = snap;   // measure now; the snapshot is the fallback
             ni::host::DiagLog::get().text ("STATE", instNo_, "restore|gen=%u|apply=%d|keep=%d|phys=%d|B=%d", measureGen_, apply ? 1 : 0,
@@ -1012,6 +1088,7 @@ ni::gui::ViewInputs NovaInsertProcessor::viewInputs() const
     in.reason = lastReason_;
     in.driverMode = driverMode_;
     in.driverOverride = driverOverride_;
+    in.driverBeta = driverBeta_;
     in.missingChannel = missingChannel_;
     const bool active = inst_ && inst_->active();
     in.physLoop = active ? inst_->physLoop() : -1;

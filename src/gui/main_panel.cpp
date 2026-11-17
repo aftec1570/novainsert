@@ -1,5 +1,6 @@
 #include "gui/main_panel.hpp"
 #include "engine/level_cal.hpp"
+#include "engine/version.hpp"
 #include <cmath>
 
 namespace ni::gui
@@ -336,7 +337,11 @@ void MainPanel::paint (juce::Graphics& g)
     for (size_t i = 0; i < lines.size() && i < 3; ++i)
         text (lines[i].first, area.removeFromTop (15).withWidth (textW), uiFont (12.0f, i == 0 && (! vm_.progressText.empty() || ! vm_.calText.empty())), lines[i].second,
               juce::Justification::centredLeft);
-    text (footer_, kText.withTrimmedTop (32), uiFont (10.5f), ink::dim.withAlpha (0.8f), juce::Justification::bottomRight);
+    if (ni::engine::kIsPreRelease)   // a beta reads as one at a glance (user 2026-11-15)
+        text (juce::String (juce::CharPointer_UTF8 ("BETA BUILD \xe2\x80\x93 not a production release  \xc2\xb7  ")) + footer_, kText.withTrimmedTop (32), uiFont (11.5f, true), ink::warn,
+              juce::Justification::bottomRight);
+    else
+        text (footer_, kText.withTrimmedTop (32), uiFont (10.5f), ink::dim.withAlpha (0.8f), juce::Justification::bottomRight);
 }
 
 double MainPanel::linkedUserValue (TrimKnob& self, TrimKnob& other, double attempted)

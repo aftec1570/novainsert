@@ -57,6 +57,54 @@ TEST_CASE("pair registry: releasing the owner promotes the oldest waiter exactly
     REQUIRE(promoted.size() == 2);
 }
 
+TEST_CASE("pair registry: a stereo owner releasing promotes both a mono L and a mono R waiter (forum 2026-11-17)")
+{
+    PairRegistry r;
+    std::vector<int> promoted;
+    r.onPromoted = [&](int id) { promoted.push_back(id); };
+    REQUIRE(r.claim(1, stereoPair(4, 4), "Drums") == Claim::Owner);
+    REQUIRE(r.claim(2, monoPair(4, 4), "Vox") == Claim::Conflict);
+    REQUIRE(r.claim(3, monoPair(5, 5), "Gtr") == Claim::Conflict);
+    REQUIRE(r.claim(4, monoPair(4, 4), "Vox2") == Claim::Conflict);   // same channel as Vox: stays waiting behind it
+    r.release(1);
+    REQUIRE(promoted == std::vector<int> { 2, 3 });
+    REQUIRE(r.ownerTrackOf(monoPair(4, 4)) == std::string("Vox"));
+    REQUIRE(r.ownerTrackOf(monoPair(5, 5)) == std::string("Gtr"));
+    r.release(2);
+    REQUIRE(promoted == std::vector<int> { 2, 3, 4 });
+}
+
+TEST_CASE("pair registry: waiterFreedBy names an owner whose yield (with the other bypassed owners) frees a waiter")
+{
+    PairRegistry r;
+    REQUIRE(r.claim(1, stereoPair(0, 0), "Tr1") == Claim::Owner);
+    REQUIRE(r.claim(2, stereoPair(2, 2), "Tr2") == Claim::Owner);
+    REQUIRE_FALSE(r.waiterFreedBy(1));
+    REQUIRE(r.claim(3, monoPair(1, 1), "Tr3") == Claim::Conflict);   // waits on Tr1's R channel only
+    REQUIRE(r.waiterFreedBy(1));
+    REQUIRE_FALSE(r.waiterFreedBy(2));
+    REQUIRE_FALSE(r.waiterFreedBy(3));   // a waiter is not an owner
+    REQUIRE_FALSE(r.waiterFreedBy(9));   // unknown instance
+    r.release(3);
+    REQUIRE_FALSE(r.waiterFreedBy(1));
+}
+
+TEST_CASE("pair registry: a waiter blocked by an active owner frees nobody; two bypassed owners both yield (review 2026-11-17)")
+{
+    PairRegistry r;
+    REQUIRE(r.claim(1, monoPair(0, 0), "VoxL") == Claim::Owner);
+    REQUIRE(r.claim(2, monoPair(1, 1), "GtrR") == Claim::Owner);
+    REQUIRE(r.claim(3, stereoPair(0, 0), "Drums") == Claim::Conflict);   // needs both channels
+    r.setBypassed(1, true);
+    REQUIRE_FALSE(r.waiterFreedBy(1));   // GtrR is active: Drums would still wait, VoxL keeps its lock
+    r.setBypassed(2, true);
+    REQUIRE(r.waiterFreedBy(1));
+    REQUIRE(r.waiterFreedBy(2));
+    r.setBypassed(1, false);
+    REQUIRE_FALSE(r.waiterFreedBy(2));   // VoxL active again
+    r.setBypassed(9, true);              // unknown instance: no effect
+}
+
 TEST_CASE("pair registry: same library device on different pairs warns but does not conflict")
 {
     PairRegistry r;
