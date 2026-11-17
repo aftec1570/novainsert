@@ -323,6 +323,7 @@ Hardware cannot run faster than real time, so a render through NovaInsert must b
 ## 14. Several devices in one project
 
 - Each physical channel has one owner. A second instance that selects a record sharing an output or an input with a running instance shows "Unavailable" and "Device in use by <track>", stays muted and does not measure. When the owner changes device or is removed, the waiting instance measures and takes over.
+- Bypassing the owner (its FX enable box, or the track's whole FX chain) also hands the channels over when that lets a waiting instance run (if the waiting instance also needs channels another, active instance holds, nothing changes until that one is bypassed too). The bypassed instance keeps its device and shows "Bypassed: device handed to the instance waiting for it". Example: the drums were compressed in stereo and printed; bypass that instance and the vocal and guitar instances using the compressor's left and right channels as mono presets take over and measure. When you un-bypass the drums instance it claims the channels back as soon as they are free and measures again; until then it waits like any other conflict. A bypass with nobody waiting changes nothing: the instance keeps its channels and its latency, so A/B comparisons never re-measure. The handover happens within about a second.
 - Measurements of different units run in parallel. If a click is disturbed by a neighbour's click, the attempt is rejected and repeated alone.
 - Loading a project with many instances queues them; the lamp shows "Queued" with the position.
 - The same record twice on different, free channels is allowed with a warning.
@@ -382,6 +383,7 @@ The snapshot means a later edit of the library cannot change how an old project 
 | Sample rate changed | the device rate changed | nothing: the latency check runs again on its own, and a calibration stored for that rate is reused. Change the rate only while stopped, never during playback or recording |
 | Select a specific audio device, not <default> | REAPER uses the system default device | pick the interface by name in REAPER's audio device settings |
 | Another instance uses this device | channel conflict | wait, or change one of the records |
+| Bypassed: device handed to the instance waiting for it. Un-bypass to claim it back | this instance is bypassed and another one took its channels | un-bypass it; it measures again once the channels are free |
 | Measurement paused while recording | a measurement was due during recording | it resumes when recording stops |
 | Anticipative FX processing is on for this track | you re-enabled it | press RE-APPLY ANTICIPATIVE FX |
 | Audio device lost | REAPER lost the interface | reconnect; the instance re-measures when it returns |

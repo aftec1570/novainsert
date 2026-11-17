@@ -62,3 +62,17 @@ TEST_CASE("ChannelNotDelivered is appended after DriverUnsupported and blocks me
     REQUIRE(static_cast<int>(Reason::ChannelNotDelivered) == static_cast<int>(Reason::DriverUnsupported) + 1);
     REQUIRE_FALSE(ni::engine::measureRequestAllowed(State::Unavailable, Reason::ChannelNotDelivered));
 }
+
+TEST_CASE("bypassAction: a bypassed instance yields only to a waiting claimant and resumes when un-bypassed (2026-11-17)")
+{
+    using ni::engine::bypassAction; using A = ni::engine::BypassAction;
+    // bypassed, yielded, owner, waiting, someoneWaitsOnMe
+    REQUIRE(bypassAction(false, false, true, false, true) == A::None);    // active owner keeps its channels
+    REQUIRE(bypassAction(true, false, true, false, false) == A::None);    // plain A/B bypass: no waiter, no re-measure
+    REQUIRE(bypassAction(true, false, true, false, true) == A::Yield);    // bypassed owner, somebody waits
+    REQUIRE(bypassAction(true, false, false, true, false) == A::Yield);   // bypassed waiter leaves the queue
+    REQUIRE(bypassAction(false, false, false, true, false) == A::None);   // active waiter keeps waiting
+    REQUIRE(bypassAction(true, true, false, false, false) == A::None);    // still bypassed after yielding
+    REQUIRE(bypassAction(false, true, false, false, false) == A::Resume); // un-bypassed: claim again
+    REQUIRE(bypassAction(true, false, false, false, false) == A::None);   // no device claimed
+}

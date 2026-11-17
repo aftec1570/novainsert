@@ -145,6 +145,17 @@ TEST_CASE("track FX named-config API is resolved but optional (own slot name)")
     g_missing.clear();
 }
 
+TEST_CASE("TrackFX_GetEnabled is resolved but optional (bypass handover)")
+{
+    g_missing.clear(); ReaperApi a; std::vector<std::string> m;
+    REQUIRE(loadReaperApi(&fakeResolver, a, m) == ApiStatus::Ok);
+    REQUIRE(a.TrackFX_GetEnabled != nullptr);
+    g_missing = { "TrackFX_GetEnabled" }; ReaperApi b; m.clear();
+    REQUIRE(loadReaperApi(&fakeResolver, b, m) == ApiStatus::Ok);
+    REQUIRE(b.TrackFX_GetEnabled == nullptr);
+    g_missing.clear();
+}
+
 TEST_CASE("driverVerdict: family prefix match", "[reaper_api]")          // Review Focus 1
 {
     using V = ni::host::DriverVerdict;

@@ -59,6 +59,7 @@ struct ReaperApi
     // Track FX (optional: own slot name, host/slot_name.hpp)
     bool (*TrackFX_GetNamedConfigParm)(MediaTrack* track, int fx, const char* parmname, char* bufOut, int bufOut_sz) = nullptr;
     bool (*TrackFX_SetNamedConfigParm)(MediaTrack* track, int fx, const char* parmname, const char* value) = nullptr;
+    bool (*TrackFX_GetEnabled)(MediaTrack* track, int fx) = nullptr;                // optional: bypass handover (2026-11-17)
 };
 
 enum class ApiStatus { Ok, NotReaper, MissingSymbols };

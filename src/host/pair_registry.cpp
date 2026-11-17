@@ -47,15 +47,35 @@ void PairRegistry::release(int instanceId)
     const bool wasOwner = it->owner;
     entries_.erase(it);
     if (!wasOwner) return;
-    // Promote the oldest waiter whose pair is now free of owners.
+    // Promote, oldest first, every waiter whose pair is now free of owners: each promotion is an owner the later waiters are
+    // checked against. The ids are collected first, so onPromoted never runs while the entries are being walked.
+    std::vector<int> promoted;
     for (auto& e : entries_)
     {
         if (e.owner || ownerOf(e.pair, e.id) != nullptr) continue;
         e.owner = true;
-        const int id = e.id;
-        if (onPromoted) onPromoted(id);
-        return;
+        promoted.push_back(e.id);
     }
+    if (onPromoted) for (const int id : promoted) onPromoted(id);
+}
+
+void PairRegistry::setBypassed(int instanceId, bool bypassed)
+{
+    for (auto& e : entries_) if (e.id == instanceId) e.bypassed = bypassed;
+}
+
+bool PairRegistry::waiterFreedBy(int instanceId) const
+{
+    const auto me = std::find_if(entries_.begin(), entries_.end(), [&](const Entry& e) { return e.id == instanceId; });
+    if (me == entries_.end() || !me->owner) return false;
+    for (const auto& w : entries_)
+    {
+        if (w.owner || w.id == instanceId || !overlaps(w.pair, me->pair)) continue;
+        const bool blocked = std::any_of(entries_.begin(), entries_.end(), [&](const Entry& o) {
+            return o.owner && o.id != instanceId && !o.bypassed && overlaps(o.pair, w.pair); });
+        if (!blocked) return true;
+    }
+    return false;
 }
 
 std::optional<std::string> PairRegistry::ownerTrackOf(const Pair& pair) const

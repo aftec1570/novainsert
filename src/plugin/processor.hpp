@@ -100,6 +100,10 @@ private:
     void parameterGestureChanged (int, bool) override {}
     bool resolveTrack();               // own MediaTrack via getReaperParent; true once known
     void syncSlot();                   // message thread: own FX slot shows the device name (host/slot_name.hpp)
+    bool hostBypassed() const;         // message thread: this FX slot or the track's whole FX chain is bypassed in REAPER
+    void serviceBypass();              // message thread, 500 ms: bypass handover (engine::bypassAction, forum request 2026-11-17)
+    void yieldPair();                  // bypassed: hand the channels to the waiting instance, keep the device selected
+    void resumePair();                 // un-bypassed: claim the channels again (measure) or wait like any conflict
     void setState (ni::engine::State s, ni::engine::Reason r);
     void evaluateHostState (ni::engine::Reason trigger = ni::engine::Reason::None);   // message thread: device key / sample rate / hook -> state; trigger labels the re-request
     void setReadOnly (ni::plugin::Param p, int value);
@@ -150,12 +154,15 @@ private:
     IReaperHostApplication* reaperHost_ = nullptr;   // retained for getReaperParent(); released in the destructor
     MediaTrack* track_ = nullptr;
     int lastSlotIdx_ = -2;             // getReaperParent(6) last seen (diagnostics on change)
+    bool slotVerified_ = false;        // lastSlotIdx_ names a NovaInsert slot (syncSlotName did not answer NotOurs/Unsupported)
     bool slotDirty_ = false;           // device changed: sync the slot name on the next timer tick (outside REAPER's set call)
     ReaProject* proj_ = nullptr;
     std::unique_ptr<ni::plugin::DeviceLibrary> library_;
     int claimedDevice_ = -1;           // device parameter value last applied (-1 = never)
     bool pairOwned_ = false;
     bool conflicted_ = false;
+    bool yielded_ = false;             // bypassed and handed its channels over: device still selected, not in the pair registry
+    bool bypassSeen_ = false;          // last polled bypass state (diagnostics on change)
     bool antViolation_ = false;        // user cleared the no-anticipative-FX bit on a required track (F1 §5)
     bool everOpen_ = false;
     bool lastOpen_ = false;

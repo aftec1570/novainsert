@@ -61,6 +61,8 @@ inline std::string reasonText(engine::Reason r)
         case R::DriverUnsupported: return "REAPER's audio driver is not supported. NovaInsert needs ASIO on Windows / ALSA on Linux";
 #endif
         case R::SampleRateChange: return "Sample rate changed";
+        case R::BypassYield: return "Bypassed: device handed to the instance waiting for it. Un-bypass to claim it back";
+        case R::BypassResume: return "Un-bypassed: device claimed again";
         case R::ChannelNotDelivered: return "REAPER delivers no audio on this preset's channel. Enable it in Preferences > Audio > Device (input/output range)";
     }
     return "Unknown reason";

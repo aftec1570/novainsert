@@ -267,6 +267,10 @@ pass have no hardware return yet. NovaInsert reports the gap instead of hiding i
 - Each physical channel has one owner. A second instance sharing a channel shows "Device in use by <track>", stays muted
   and takes over when the owner releases the channels. Measurements of different units run in parallel; a click disturbed
   by a neighbour's click is repeated alone.
+- Bypassing the owner hands its channels to an instance waiting for them, without changing the owner's device: print a
+  stereo pass on the drums, bypass that instance, and the mono vocal and guitar instances on its left and right channels
+  take over and measure. Un-bypassed, the owner claims the channels back once they are free, and measures again. If nobody
+  is waiting, a bypassed instance keeps its channels and its latency, so A/B bypassing never re-measures.
 - REAPER's "anticipative FX processing" breaks a live hardware loop. NovaInsert turns it off for every track that holds an
   instance (and the folders above it) and restores it when the last instance leaves. The global preference is never touched.
 - `…/REAPER/NovaInsert/devices.json` holds the presets, `…/REAPER/NovaInsert/calibrations.json` the measured loops (one

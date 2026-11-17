@@ -53,6 +53,7 @@ ApiStatus loadReaperApi(const ApiResolver& resolver, ReaperApi& out, std::vector
     NI_OPT(SectionFromUniqueID);
     NI_OPT(TrackFX_GetNamedConfigParm);
     NI_OPT(TrackFX_SetNamedConfigParm);
+    NI_OPT(TrackFX_GetEnabled);
     NI_REQ(CountTracks);
     NI_REQ(GetTrack);
     NI_REQ(ValidatePtr2);

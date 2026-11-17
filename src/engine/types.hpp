@@ -41,7 +41,10 @@ enum class Reason : uint8_t { None = 0,
     // range; forum report 2026-11-12); appended likewise
     ChannelNotDelivered,
     // the device sample rate changed (rate-independence 2026-11-14): a latency in samples no longer holds, re-measure
-    SampleRateChange };
+    SampleRateChange,
+    // a bypassed instance handed its channels to an instance waiting for them, and claims them back when un-bypassed
+    // (forum request 2026-11-17); appended likewise
+    BypassYield, BypassResume };
 
 // Side of a STEREO direction (mono/stereo routing design 2026-11-05): the whole pair, or one side of a stereo unit used as a
 // mono loop. A MONO direction ignores its selector.
@@ -60,6 +63,19 @@ constexpr bool measureRequestAllowed(State s, Reason r) noexcept
         case State::Unavailable: case State::UnsupportedHost: case State::UnsupportedSampleRate: return false;
     }
     return false;
+}
+
+// Bypass handover (forum request 2026-11-17), decided on the 500 ms host poll. A bypassed instance keeps its channels while
+// nobody else wants them, so a plain A/B bypass never re-measures; it yields them only when another instance waits for one of
+// them (owner) or leaves the queue so it is never promoted while bypassed (waiter). A yielded instance claims again (and
+// measures) once it is un-bypassed; if the channels are taken by then it waits like any other conflict.
+enum class BypassAction : uint8_t { None, Yield, Resume };
+constexpr BypassAction bypassAction(bool bypassed, bool yielded, bool owner, bool waiting, bool someoneWaitsOnMe) noexcept
+{
+    if (yielded) return bypassed ? BypassAction::None : BypassAction::Resume;
+    if (! bypassed) return BypassAction::None;
+    if (waiting) return BypassAction::Yield;
+    return owner && someoneWaitsOnMe ? BypassAction::Yield : BypassAction::None;
 }
 
 // RE-CALIBRATION is offered only after a failed calibration (user 2026-11-06): a Failed instance, or a failed open check

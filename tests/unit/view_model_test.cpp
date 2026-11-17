@@ -83,14 +83,14 @@ TEST_CASE("view_model_lead_in_hint")
 TEST_CASE("view_model_failure_reason_text_for_every_reason")
 {
     std::set<std::string> seen;
-    for (int r = static_cast<int>(Reason::ProjectLoad); r <= static_cast<int>(Reason::SampleRateChange); ++r)
+    for (int r = static_cast<int>(Reason::ProjectLoad); r <= static_cast<int>(Reason::BypassResume); ++r)
     {
         const std::string t = reasonText(static_cast<Reason>(r));
         INFO(r);
         REQUIRE_FALSE(t.empty());
         seen.insert(t);
     }
-    REQUIRE(seen.size() == 30);   // 30 distinct strings
+    REQUIRE(seen.size() == 32);   // 32 distinct strings
     REQUIRE(reasonText(Reason::None).empty());
     ViewInputs in = base();
     in.state = State::Failed; in.reason = Reason::NoReturn;
