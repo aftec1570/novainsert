@@ -69,7 +69,8 @@ public:
     void reapplyAnticipativeFromGui();
     void recalibrateFromGui();   // RE-CALIBRATION (message thread): re-queue the latency check after a failed calibration
     ni::engine::MeterEngine& sendMeter() noexcept { return sendMeter_; }
-    ni::engine::MeterEngine& returnMeter() noexcept { return returnMeter_; }
+    ni::engine::MeterEngine& returnMeter() noexcept { return returnMeter_; }         // after the return trim (dBFS unit)
+    ni::engine::MeterEngine& returnRawMeter() noexcept { return returnRawMeter_; }   // converter input, before the trim (dBu unit)
     float vuReference() const noexcept { return vuRef_; }
     // Level CAL / LINK / device defaults (VU GUI spec 2026-11-02 §2/§7; message thread)
     std::vector<ni::gui::DeviceListEntry> deviceList() const;   // library order; channels owned by another instance are "in use"
@@ -238,7 +239,7 @@ private:
     bool applyPdcState (ni::engine::State s, ni::engine::Reason r, uint32_t gen, const char* diag);
     std::atomic<bool> measuringRt_ { false };   // processBlock: a probe may be armed (cut it on a record start)
     std::atomic<bool> recordCut_ { false };     // processBlock -> timer: the probe was cut by recording
-    ni::engine::MeterEngine sendMeter_, returnMeter_;   // fed in processBlock (RT), read by the editor
+    ni::engine::MeterEngine sendMeter_, returnMeter_, returnRawMeter_;   // fed in processBlock (RT), read by the editor
     float vuRef_ = -20.0f;                              // device record vuRefDbfs (0 VU)
     int64_t lastMeasuredUnix_ = 0;
     bool inParamCallback_ = false;

@@ -690,6 +690,25 @@ TEST_CASE("slot_loop_hook_meter_taps")
     REQUIRE(std::fabs(q.peakDb[1] - (-18.06f)) < 0.05f);
 }
 
+TEST_CASE("slot_loop_raw_return_meter_is_the_converter_input_before_the_trim")
+{
+    // forum 2026-11-18: with the unit on dBu the RETURN meter is the analog level at the converter input, whatever the trim does
+    const int B = 4800;
+    Routing rt = kStereo; rt.returnTrimDb = -3.0f;
+    SlotLoopEngine e; e.prepare(B); e.setRouting(rt); REQUIRE(e.setLatency(2 * B, 4 * B));
+    MeterEngine sm, rm, raw; sm.prepare(kDefaultSampleRate); rm.prepare(kDefaultSampleRate); raw.prepare(kDefaultSampleRate);
+    e.setMeters(&sm, &rm, &raw);
+    std::vector<float> half(B, 0.5f), l(B), r(B);
+    float* out[2] { l.data(), r.data() };
+    const float* in[2] { half.data(), half.data() };
+    e.onPre(0, B, in);
+    REQUIRE(e.onPost(0, B, out));
+    const auto q = rm.read(-20.0f), w = raw.read(-20.0f);
+    REQUIRE(std::fabs(q.peakDb[0] - (-9.02f)) < 0.05f);   // trimmed: what the track gets back (dBFS unit)
+    REQUIRE(std::fabs(w.peakDb[0] - (-6.02f)) < 0.05f);   // raw: the hardware level (dBu unit)
+    REQUIRE(std::fabs(w.peakDb[1] - (-6.02f)) < 0.05f);
+}
+
 TEST_CASE("slot_loop_return_meter_clip_is_the_converter_input_not_the_trimmed_level")
 {
     const int B = 4800;

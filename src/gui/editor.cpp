@@ -132,7 +132,10 @@ void NovaInsertEditor::timerCallback()
         if (++slowTicks_ % 8 == 0) proc_.pollLibrary();   // 1 Hz: presets saved elsewhere, host channel names
         refreshSlow();
     }
-    panel_.setMeters (proc_.sendMeter().read (proc_.vuReference()), proc_.returnMeter().read (proc_.vuReference()));
+    // dBu = the analog level at the converters: the RETURN side then reads the input before the return trim; dBFS = the level
+    // the track gets back, after the trim (forum 2026-11-18)
+    auto& ret = panel_.meterIsDbu() ? proc_.returnRawMeter() : proc_.returnMeter();
+    panel_.setMeters (proc_.sendMeter().read (proc_.vuReference()), ret.read (proc_.vuReference()));
     panel_.advance (dt);
 }
 } // namespace ni::gui

@@ -1,7 +1,22 @@
 # NovaInsert – version history
 
-Latest version: **1.4.2** · [Download the latest release (macOS DMG, Windows zip, Linux tar.gz)](https://github.com/aftec1570/novainsert/releases/latest) ·
+Latest version: **1.4.3** · [Download the latest release (macOS DMG, Windows zip, Linux tar.gz)](https://github.com/aftec1570/novainsert/releases/latest) ·
 [All releases](https://github.com/aftec1570/novainsert/releases) · [Bug and fix ledger](BUGS.md)
+
+## 1.4.3 – 2026-11-18
+
+Bug-fix release for macOS, Windows and Linux. Projects, presets, calibrations and settings load unchanged.
+
+- **Fix (macOS):** the 1.4.1 and 1.4.2 installers for macOS carried a plug-in built before the version number was set, so
+  the panel said 1.3.0. That build had the bypass handover of 1.4.1 but not the later changes. 1.4.3 is built from the
+  release sources and says 1.4.3 ([BUGS.md #11](BUGS.md)). Windows and Linux were not affected.
+- **Change:** with the meter unit on dBu, the RETURN meter and its readout now show the level at the converter input,
+  before the return trim, so a dBu reading is the analog level whatever the trim does. A neutral loop driven at +4 dBu reads
+  0 VU on both meters. With the unit on dBFS the RETURN meter shows the level after the trim against the SETUP 0 VU
+  reference, as before ([BUGS.md #12](BUGS.md)). The audio is not changed.
+- Manual: the meter chapter now says what the dBu / dBFS switch does to each meter.
+- Validation: a new unit test for the meter tap; the full unit suite on macOS, Windows and Linux; pluginval; the macOS
+  installer now refuses to package a plug-in that does not carry the release version.
 
 ## 1.4.2 – 2026-11-17
 

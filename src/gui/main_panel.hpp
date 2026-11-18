@@ -60,6 +60,7 @@ public:
     void settleNeedles();                                                              // snapshot: needles at rest on the drives, bars at the peaks
     void setMeterView (int view);                                                      // MeterView index: 0 VU faces, 1 TUBE, 2 LED, 3 TWIN bars; global, settings.json "meterView"
     int currentMeterView() const noexcept { return meterView.selected(); }
+    bool meterIsDbu() const noexcept { return meterUnit.selected() == 0; }
     void setMeterUnit (int unit);                                                      // 0 = dBu, 1 = dBFS on BOTH meters (user 2026-11-05); global, settings.json "meterUnit"
     void showSetup (bool on);
     void showDevices (bool on);   // SETUP and DEVICES never show together

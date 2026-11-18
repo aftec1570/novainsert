@@ -1,12 +1,12 @@
 # NovaInsert User Manual
 
-Version 1.4.2 · November 2026 · REAPER-only VST3 hardware insert for macOS (Apple silicon) · by Hillside Studios, [hillsidestudio.io](https://hillsidestudio.io)
+Version 1.4.3 · November 2026 · REAPER-only VST3 hardware insert for macOS (Apple silicon) · by Hillside Studios, [hillsidestudio.io](https://hillsidestudio.io)
 
 ![NovaInsert in REAPER](img/reaper_window.png)
 
 NovaInsert puts a piece of outboard gear into a REAPER track like any other plug-in. It sends the track to a physical output of your audio interface, takes the return from a physical input, measures the exact round-trip delay through the converters, cables and the device itself, and tells REAPER that delay so the return lines up to the sample. It also keeps the analog levels where the outboard expects them, with VU meters, trims and a one-press level calibration.
 
-This manual covers version 1.4.2. The plug-in is free to use and comes as is, without any warranty. Read the safety notice in chapter 2 before you connect anything.
+This manual covers version 1.4.3. The plug-in is free to use and comes as is, without any warranty. Read the safety notice in chapter 2 before you connect anything.
 
 ## 1. What NovaInsert does
 
@@ -15,7 +15,7 @@ This manual covers version 1.4.2. The plug-in is free to use and comes as is, wi
 - **Compensates exactly.** The delay reported to REAPER is the measured loop plus a two-block margin, rounded up to whole blocks. REAPER's plug-in delay compensation does the rest.
 - **Renders without surprises.** Starting a render switches REAPER to realtime rendering automatically and restores your setting afterwards. A render is refused, with a message naming the track, if any insert is not ready.
 - **Handles many devices.** No limit on instances in one project (validated with twenty). Each physical channel has one owner; a second instance on the same channels waits instead of corrupting the first one.
-- **Gets the levels right.** A SEND meter referenced to +4 dBu, a RETURN meter referenced to your converter's alignment, trims from −24 to +12 dB, LINK, and a level calibration that puts the send at the outboard's working point and brings the return back to digital unity.
+- **Gets the levels right.** SEND and RETURN meters that read the analog level in dBu (0 VU = +4 dBu) or the digital level in dBFS, trims from −24 to +12 dB, LINK, and a level calibration that puts the send at the outboard's working point and brings the return back to digital unity.
 - **Explicit mono and stereo.** Each preset says whether its send and its return are mono or stereo. A mono send carries the track's mix on one output; a mono return comes back on both sides. A stereo unit can also be used one side at a time. Nothing passes through unseen.
 - **A device library.** Every unit is a named record. Pick "Pultec" and the FX slot in the mixer reads "Pultec".
 
@@ -43,7 +43,7 @@ You are responsible for the routing, the monitoring level and the hardware. See 
 
 **Install from the DMG**
 
-1. Open the DMG and double-click "Install NovaInsert 1.4.2.pkg".
+1. Open the DMG and double-click "Install NovaInsert 1.4.3.pkg".
 2. Read and accept the license agreement, then let the installer copy the plug-in to `/Library/Audio/Plug-Ins/VST3`.
 3. The package is signed with an Apple Developer ID and notarized by Apple, so macOS opens it directly without a security prompt.
 4. In REAPER open Options, Preferences, Plug-ins, VST and press "Re-scan". Add "VST3: NovaInsert" to a track.
@@ -99,8 +99,8 @@ Two REAPER details worth knowing. Typing a space into the name field needs "Send
 |---|---|---|
 | 1 | Device selector | the green display names the selected device and the physical channels it owns; click to pick another record or "No device" |
 | 2 | Status lamp | the measurement state in colour and text, with the measured LOOP and the PDC reported to REAPER |
-| 3 | SEND meter | VU of the signal leaving for the outboard; 0 VU = +4 dBu at the converter output |
-| 4 | RETURN meter | VU of the signal coming back; 0 VU = the dBFS reference set in SETUP |
+| 3 | SEND meter | VU of the signal leaving for the outboard. Unit dBu: 0 VU = +4 dBu at the converter output; unit dBFS: 0 VU = the reference set in SETUP |
+| 4 | RETURN meter | VU of the signal coming back. Unit dBu: the level at the converter input, 0 VU = +4 dBu; unit dBFS: the level after the return trim, 0 VU = the reference set in SETUP |
 | 5 | SEND TRIM | gain before the converter, −24 to +12 dB; double-click resets to 0 |
 | 6 | CAL +4 dBu | sets the send trim so the track itself leaves at 0 VU = +4 dBu |
 | 7 | LINK | couples the two trims: more send, less return, same mix level |
@@ -113,10 +113,10 @@ Two REAPER details worth knowing. Typing a space into the name field needs "Send
 | 14 | Status lines | calibration messages, the failure reason, warnings and tips |
 | 15 | Footer | time of the last measurement, the algorithm version and the plug-in version |
 | 16 | VU / TUBE / LED / TWIN | switches the meter area between the two VU faces and the three level-bar looks (chapter 8) |
-| 17 | dBu / dBFS | the unit of both meters' readouts |
+| 17 | dBu / dBFS | the unit of both meters: the analog level at the converters, or the digital level against the SETUP reference (chapter 8) |
 | 18 | RE-CALIBRATION | (under SETUP) measures the loop again; available only after a failed calibration (chapter 7) |
 
-Each meter has a peak lamp in its upper right corner. The SEND strip has a PEAK lamp (the send reached −0.1 dBFS or more), the RETURN strip a CLIP lamp (a returned sample exceeded 0 dBFS). The readouts under the CAL buttons show the current level per channel: dBu for the send, dBFS for the return.
+Each meter has a peak lamp in its upper right corner. The SEND strip has a PEAK lamp (the send reached −0.1 dBFS or more), the RETURN strip a CLIP lamp (a returned sample exceeded 0 dBFS). The readouts under the CAL buttons show the current level per channel in the selected unit.
 
 **Hover tips.** Rest the mouse pointer on any control for a moment and a short tip says what it does. This works on the main page, in SETUP and in PRESET SETUP.
 
@@ -192,8 +192,12 @@ At any other time it is greyed out: a Locked instance with a good measurement ne
 
 The two VU meters move like real ones: full-wave rectified average, 300 ms to 99 % of a step with 1.3 % overshoot, as IEC 60268-17 specifies. A mono device shows one black needle; a stereo device two, black for L and red for R, with a small legend on the face. Under the VU scale a dBFS sub-scale shows where the digital level sits.
 
-- **SEND meter:** 0 VU corresponds to +4 dBu at the converter output. The dBFS sub-scale follows the converter alignment you set in SETUP (with 24 dBu at 0 dBFS, 0 VU is −20 dBFS). If the device record has an outboard maximum input level, a marker on the scale shows it.
-- **RETURN meter:** 0 VU corresponds to the reference you choose in SETUP, −20 dBFS by default or −18 dBFS.
+The dBu / dBFS switch chooses what both meters show:
+
+- **dBu: the analog level at the converters.** 0 VU is +4 dBu on both meters. The dBFS sub-scale follows the converter alignment you set in SETUP (with 24 dBu at 0 dBFS, 0 VU is −20 dBFS; with 19 dBu it is −15 dBFS). The SEND meter shows what leaves the converter output, after the send trim. The RETURN meter shows what arrives at the converter input, before the return trim: the return trim does not move it, because the trim does not change the hardware level. A neutral loop driven at +4 dBu reads 0 VU on both meters.
+- **dBFS: the digital level.** 0 VU is the reference you choose in SETUP (−20 dBFS by default, −18 dBFS or a custom value) on both meters. The SEND meter still shows the level after the send trim; the RETURN meter shows the level after the return trim, which is what the track gets back.
+
+If the device record has an outboard maximum input level, a marker on the SEND scale shows it.
 
 ![PEAK and CLIP lit](img/peak_clip.png)
 
@@ -216,7 +220,7 @@ The rocker in the top bar has four positions: VU shows the two VU faces, TUBE, L
 All three looks read the same way:
 
 - **The bars.** The faint part of a bar (LED: the dimmer segments) is the peak level, which falls at 24 dB/s like REAPER's peak meters. The bright part is the RMS level. The bead (LED: one fully lit segment) is the peak hold (10 seconds). The scale runs from −60 to 0 dBFS. A mono device shows one bar per group, a stereo device shows L and R.
-- **The dBu scale.** Each group reads on two scales: dBu above the bars and dBFS below. The SEND group's dBu scale follows the send alignment set in SETUP (with 24 dBu at 0 dBFS, +4 dBu sits at −20 dBFS), and the RETURN group's follows the return alignment. The +4 dBu tick is highlighted. The line through the bars is the group's 0 VU reference: +4 dBu with dBu selected, the SETUP reference with dBFS selected. If the preset has an outboard maximum input level, a small triangle above the SEND bars marks it.
+- **The dBu scale.** Each group reads on two scales: dBu above the bars and dBFS below. The SEND group's dBu scale follows the send alignment set in SETUP (with 24 dBu at 0 dBFS, +4 dBu sits at −20 dBFS), and the RETURN group's follows the return alignment. The +4 dBu tick is highlighted. The line through the bars is the group's 0 VU reference: +4 dBu with dBu selected, the SETUP reference with dBFS selected. As on the VU faces, the RETURN group shows the converter input before the return trim with dBu selected and the level after the trim with dBFS selected. If the preset has an outboard maximum input level, a small triangle above the SEND bars marks it.
 - **PEAK HOLD.** The held peak per channel, in the unit chosen with the dBu | dBFS rocker. In TUBE and LED it turns red when it reaches −0.1 dBFS.
 
 ![Mono device in the TUBE view](img/bars_mono.png)
@@ -258,7 +262,7 @@ CAL is refused, with a message, while recording, without an owned device, and wh
 | Interface | the audio device as REAPER reports it (read-only) |
 | Send: dBu at 0 dBFS | the analog level at full scale on the output the device uses |
 | Return: dBu at 0 dBFS | the same for the input |
-| 0 VU reference | −20 dBFS, −18 dBFS or a custom value from −30 to −6 dBFS; the RETURN meter and the CAL maths follow it |
+| 0 VU reference | −20 dBFS, −18 dBFS or a custom value from −30 to −6 dBFS; both meters with the dBFS unit and the CAL maths follow it |
 | Outboard max input | optional marker on the SEND scale |
 | Channel offsets | per-channel fine trims in 0.1 dB steps for L and R on the send and the return, on top of the main trims; the R rows are enabled for a stereo send / return |
 | Skin | DARK (default), IVORY or SILVER: the colour scheme of the whole editor (below). One setting for all instances, stored in `settings.json`; every open editor follows within a second |
@@ -396,7 +400,7 @@ The snapshot means a later edit of the library cannot change how an old project 
 | Loop gain outside the trim range | the return differs from the send by more than the trims can correct | check the unit's gain structure |
 | CAL needs Insert mode / is not available while recording / Select a free device first / Wait for the latency measurement | CAL preconditions | see chapter 9 |
 
-## 19. Limitations of version 1.4.2
+## 19. Limitations of version 1.4.3
 
 - 44.1, 48, 88.2, 96 or 192 kHz (hardware-validated on the Apollo at all five; change the rate only with the transport stopped, every loop then re-measures on its own), REAPER 7.6 or newer (tested on 7.83, 7.84, 7.85 and 7.86), macOS Apple silicon, VST3 only.
 - Presets are stored by position: deleting one shifts the later ones in projects that have not been reopened since (chapter 4).

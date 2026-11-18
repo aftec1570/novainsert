@@ -1,9 +1,9 @@
 # NovaInsert
 
 **A REAPER-only VST3 hardware insert for macOS (Apple silicon), Windows (x64) and Linux (x86_64) that measures its own latency.**
-Version 1.4.2 · by [Hillside Studios](https://hillsidestudio.io) · free to use, provided as is without any warranty (see [License](#license)).
+Version 1.4.3 · by [Hillside Studios](https://hillsidestudio.io) · free to use, provided as is without any warranty (see [License](#license)).
 
-**[Download NovaInsert 1.4.2](https://github.com/aftec1570/novainsert/releases/latest)**: macOS (signed and notarized DMG) ·
+**[Download NovaInsert 1.4.3](https://github.com/aftec1570/novainsert/releases/latest)**: macOS (signed and notarized DMG) ·
 Windows x64 (zip) · Linux x86_64 (tar.gz, beta) ·
 [User manual](docs/manual/NovaInsert-User-Manual.md) ([PDF](docs/manual/NovaInsert-User-Manual.pdf))
 
@@ -31,7 +31,7 @@ repository). This page is the short version.
   setting is restored afterwards. A render is refused, with a message naming the track, if any insert is not ready.
 - **Handles many devices.** No limit on instances in one project (validated with twenty). Each physical channel has one owner; a second instance
   on the same channels waits instead of corrupting the first one.
-- **Gets the levels right.** A SEND meter referenced to +4 dBu, a RETURN meter referenced to your converter's alignment,
+- **Gets the levels right.** SEND and RETURN meters that read the analog level in dBu (0 VU = +4 dBu) or the digital level in dBFS,
   trims from −24 to +12 dB, LINK, and a level calibration that puts the send at the outboard's working point and brings the
   return back to digital unity.
 - **Explicit mono and stereo.** Each preset says whether its send and its return are mono or stereo. A mono send carries
@@ -92,17 +92,17 @@ are welcome.
 
 ### macOS
 
-1. Download `NovaInsert-1.4.2-macOS-arm64.dmg` from the [release page](https://github.com/aftec1570/novainsert/releases/latest).
-2. Open the DMG and double-click "Install NovaInsert 1.4.2.pkg".
+1. Download `NovaInsert-1.4.3-macOS-arm64.dmg` from the [release page](https://github.com/aftec1570/novainsert/releases/latest).
+2. Open the DMG and double-click "Install NovaInsert 1.4.3.pkg".
 3. Read and accept the license agreement; the installer copies the plug-in to `/Library/Audio/Plug-Ins/VST3`.
    The package is signed with an Apple Developer ID and notarized by Apple, so macOS opens it without a security prompt.
 4. In REAPER: Options → Preferences → Plug-ins → VST → "Re-scan". Add "VST3: NovaInsert (Hillside Studios)" to a track.
 
 ### Windows
 
-1. Download `NovaInsert-1.4.2-Windows-x64.zip` and its `.sha256` from the
+1. Download `NovaInsert-1.4.3-Windows-x64.zip` and its `.sha256` from the
    [release page](https://github.com/aftec1570/novainsert/releases/latest); check it in PowerShell with
-   `Get-FileHash NovaInsert-1.4.2-Windows-x64.zip` against the value in the `.sha256` file.
+   `Get-FileHash NovaInsert-1.4.3-Windows-x64.zip` against the value in the `.sha256` file.
 2. Unpack the zip and copy the folder `NovaInsert.vst3` to `C:\Program Files\Common Files\VST3\` (needs administrator rights).
    The zip is not code-signed, so Windows or your browser may warn about an unknown publisher.
 3. In REAPER: select the ASIO driver of your interface (Options → Preferences → Audio → Device), then
@@ -110,9 +110,9 @@ are welcome.
 
 ### Linux (beta)
 
-1. Download `NovaInsert-1.4.2-Linux-x86_64.tar.gz` and its `.sha256` from the
+1. Download `NovaInsert-1.4.3-Linux-x86_64.tar.gz` and its `.sha256` from the
    [release page](https://github.com/aftec1570/novainsert/releases/latest); check it with `sha256sum -c *.sha256`.
-2. `tar xzf NovaInsert-1.4.2-Linux-x86_64.tar.gz && ./install.sh` copies the plug-in to `~/.vst3` (no sudo). For all
+2. `tar xzf NovaInsert-1.4.3-Linux-x86_64.tar.gz && ./install.sh` copies the plug-in to `~/.vst3` (no sudo). For all
    users, copy `NovaInsert.vst3` to `/usr/lib/vst3/` instead.
 3. In REAPER: select the ALSA driver and a specific device (or JACK, beta, see "JACK and PipeWire on Linux"), then
    Options → Preferences → Plug-ins → VST → "Re-scan".
@@ -150,7 +150,7 @@ DELETE is refused while another track uses the preset. The presets live in
 | 1 | Device selector | names the selected device and the physical channels it owns; click to pick another preset or "No device" |
 | 2 | Status lamp | the measurement state in colour and text, with the measured LOOP and the PDC reported to REAPER |
 | 3 | SEND meter | VU of the signal leaving for the outboard; 0 VU = +4 dBu at the converter output |
-| 4 | RETURN meter | VU of the signal coming back; 0 VU = the dBFS reference set in SETUP |
+| 4 | RETURN meter | VU of the signal coming back. Unit dBu: the level at the converter input, 0 VU = +4 dBu; unit dBFS: the level after the return trim, 0 VU = the reference set in SETUP |
 | 5 | SEND TRIM | gain before the converter, −24 to +12 dB; double-click resets to 0 |
 | 6 | CAL +4 dBu | sets the send trim so the track itself leaves at 0 VU = +4 dBu |
 | 7 | LINK | couples the two trims: more send, less return, same mix level |
@@ -309,7 +309,7 @@ pass have no hardware return yet. NovaInsert reports the gap instead of hiding i
 | Re-apply anticipative FX fix | trigger | the same as the button |
 | State, Physical loop, Reported PDC, Inherent gap, CAL action, CAL status | read only | for scripts and controllers |
 
-## Limitations of version 1.4.2
+## Limitations of version 1.4.3
 
 - 44.1, 48, 88.2, 96 or 192 kHz (hardware-validated on the Apollo at all five; change the rate only with the transport stopped, every loop then re-measures on its own), REAPER 7.6 or newer (tested on 7.83, 7.84, 7.85 and 7.86), VST3 only.
 - macOS Apple silicon, Windows x64 and Linux x86_64 only. CoreAudio (macOS), ASIO (Windows) and ALSA (Linux) only, plus JACK / PipeWire-JACK on Linux as a beta (tested on a virtual JACK server only).

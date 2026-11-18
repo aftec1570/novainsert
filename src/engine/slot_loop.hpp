@@ -170,11 +170,13 @@ public:
     void cutProbe() noexcept { cutSeq_.store(probeSeq_.load(std::memory_order_acquire), std::memory_order_release); }
 
     // Hook-side meter taps (VU GUI spec §7): send = the hardware output after the send trim (onPost), return = the hardware
-    // input before the return trim (onPre); skipped while fenced. Message thread, before the hook runs; null = none.
-    void setMeters(MeterEngine* send, MeterEngine* ret) noexcept
+    // input after the return trim (onPre), retRaw = the same input before the trim (the analog level at the converter, shown
+    // with the dBu unit); skipped while fenced. Message thread, before the hook runs; null = none.
+    void setMeters(MeterEngine* send, MeterEngine* ret, MeterEngine* retRaw = nullptr) noexcept
     {
         sendMeter_.store(send, std::memory_order_release);
         retMeter_.store(ret, std::memory_order_release);
+        retRawMeter_.store(retRaw, std::memory_order_release);
     }
 
     // ---- processBlock side --------------------------------------------------------------------------------------------
@@ -292,6 +294,7 @@ public:
         const bool stereo = (route_.load(std::memory_order_acquire) & 2u) != 0;   // return width
         if (MeterEngine* m = retMeter_.load(std::memory_order_acquire))   // after the return trim (clip is judged on the raw sample)
             m->feed(hwIn[0], stereo ? hwIn[1] : nullptr, len, retGain_[0].load(std::memory_order_relaxed), retGain_[1].load(std::memory_order_relaxed));
+        if (MeterEngine* m = retRawMeter_.load(std::memory_order_acquire)) m->feed(hwIn[0], stereo ? hwIn[1] : nullptr, len);   // before the trim
         uint64_t nan = 0;
         for (int k = 0; k < len; ++k)
         {
@@ -531,7 +534,7 @@ private:
     std::atomic<bool> fenced_ { false }, muted_ { false };
     std::atomic<const float*> probePtr_ { nullptr };
     std::atomic<uint32_t> probeFlags_ { 0 };
-    std::atomic<MeterEngine*> sendMeter_ { nullptr }, retMeter_ { nullptr };
+    std::atomic<MeterEngine*> sendMeter_ { nullptr }, retMeter_ { nullptr }, retRawMeter_ { nullptr };
     std::atomic<int32_t> probeLen_ { 0 };
     std::atomic<uint32_t> probeSeq_ { 0 }, cutSeq_ { ~0u };
 

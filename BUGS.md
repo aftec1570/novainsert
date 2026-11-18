@@ -17,6 +17,8 @@ Latest version: [download](https://github.com/aftec1570/novainsert/releases/late
 | 8 | 2026-11-14 | "Unvalidated host version 7.84/x64" reads like an error | Changed | 1.3.0 |
 | 9 | 2026-11-14 | "No signal returned from the hardware" on Windows (TC Konnekt x32 ASIO, dCS converters) where ReaInsert works | Awaiting diagnostics | |
 | 10 | 2026-11-17 | Windows: saving a preset or calibration can fail with "write failed" now and then | Fixed | 1.4.2 |
+| 11 | 2026-11-18 | macOS: the panel of 1.4.1 and 1.4.2 says 1.3.0 | Fixed | 1.4.3 |
+| 12 | 2026-11-18 | With the unit on dBu the RETURN meter follows the return trim, so it is not the hardware level | Changed | 1.4.3 |
 
 ## #1 – Mouse wheel direction on trim knobs is reversed
 
@@ -136,3 +138,29 @@ Latest version: [download](https://github.com/aftec1570/novainsert/releases/late
 - **Verified:** a new unit test holds the file open for 60 ms during a save: it failed on Windows before the fix and
   passes after it; the full suite passed 5 of 5 parallel runs on Windows (428 tests), and on macOS (release, debug, ASan,
   TSan) and Linux.
+
+## #11 – macOS: the panel of 1.4.1 and 1.4.2 says 1.3.0
+
+- **Reported:** 2026-11-18 in the REAPER forum thread (Mac Studio M4, REAPER 7.83: installer and Info.plist say 1.4.2, the
+  panel says 1.3.0).
+- **Root cause:** a packaging mistake. The macOS installers of 1.4.1 and 1.4.2 were made from a plug-in binary linked
+  before the release commits: the release steps rebuilt and ran the unit tests, not the plug-in itself, and the installer
+  script packaged the binary it found. That binary has the bypass handover of 1.4.1; it does not have the changes made
+  after it was linked (the version text among them). The Windows and Linux packages are built from the release commit by
+  CI and were correct.
+- **Fix (1.4.3):** `tools/make_installer.sh` builds the plug-in first and refuses to package when the binary does not
+  contain the release version, when the bundle version differs, or when any source file is newer than the binary.
+- **Verified:** the script refused the stale 1.4.2 build; the version text was read back from the plug-in inside the
+  finished 1.4.3 installer.
+
+## #12 – With the unit on dBu the RETURN meter follows the return trim
+
+- **Reported:** 2026-11-18 in the REAPER forum thread (RME Fireface UFX at +19 dBu, analog loopback, send trim +3 dB,
+  return trim −3 dB: the SEND meter reads 0 VU, the RETURN meter −3 VU).
+- **Cause:** by design the RETURN meter was taken after the return trim in both units. With the unit on dBu that made the
+  reading wrong as an analog level: the hardware returned +4 dBu and the meter said +1 dBu. The manual also described the
+  RETURN meter's 0 VU as the SETUP reference without mentioning the unit switch.
+- **Change (1.4.3):** with the unit on dBu the RETURN meter, bars and readout show the converter input before the return
+  trim; with the unit on dBFS they show the level after the trim against the SETUP 0 VU reference. The CLIP lamp was
+  already judged on the raw input. The audio path is unchanged. Manual chapters 4, 8 and 10 rewritten accordingly.
+- **Verified:** a new unit test feeds a known level through a −3 dB return trim and reads both taps.

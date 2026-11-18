@@ -110,6 +110,7 @@ NovaInsertProcessor::NovaInsertProcessor()
     // retuned by applySampleRate when the device reports its rate (RT-safe, taken over by the next feed)
     sendMeter_.prepare (ni::engine::kDefaultSampleRate);
     returnMeter_.prepare (ni::engine::kDefaultSampleRate);
+    returnRawMeter_.prepare (ni::engine::kDefaultSampleRate);
     pDevice->addListener (this);
     startTimer (20);   // Measurer tick (F1 §7 timeouts); host polling runs every 25th tick (500 ms)
 }
@@ -186,7 +187,7 @@ void NovaInsertProcessor::setIHostApplication (Steinberg::FUnknown* host)
     apiOk_ = true;
     coord_ = ni::host::Coordinator::acquire (api);
     inst_ = std::make_unique<ni::plugin::Instance> (coord_->hooks());
-    inst_->engine().setMeters (&sendMeter_, &returnMeter_);   // hook-side taps (VU GUI §7), set before the hook registers
+    inst_->engine().setMeters (&sendMeter_, &returnMeter_, &returnRawMeter_);   // hook-side taps (VU GUI §7), set before the hook registers
     instRt_.store (inst_.get(), std::memory_order_release);
     pdc_ = std::make_unique<ni::plugin::PdcReporter> (
         [this] (int32_t R)   // the reporter's host call: engine and host latency change together (F1 §9)
@@ -603,6 +604,7 @@ void NovaInsertProcessor::applySampleRate (int fs)
     deviceFs_ = fs;
     sendMeter_.setSampleRate (fs);
     returnMeter_.setSampleRate (fs);
+    returnRawMeter_.setSampleRate (fs);
     if (inst_) inst_->engine().setSampleRate (fs);
     if (measurer_) measurer_->setSampleRate (fs);
     if (pdc_) pdc_->setSampleRate (fs);
@@ -714,14 +716,14 @@ void NovaInsertProcessor::logMeters()
 {
     if (! ni::host::DiagLog::get().enabled() || ++meterTicks_ < 50) return;   // 1 s
     meterTicks_ = 0;
-    const auto s = sendMeter_.read (vuRef_), r = returnMeter_.read (vuRef_);
+    const auto s = sendMeter_.read (vuRef_), r = returnMeter_.read (vuRef_), w = returnRawMeter_.read (vuRef_);
     constexpr float kSilent = -100.0f;
     if (s.rmsDb[0] < kSilent && s.rmsDb[1] < kSilent && r.rmsDb[0] < kSilent && r.rmsDb[1] < kSilent) return;
     auto d = [] (float x) { return static_cast<double> (x); };
-    ni::host::DiagLog::get().text ("METER", instNo_, "send=%.2f/%.2f|sendVu=%.2f/%.2f|sendPk=%.2f/%.2f|ret=%.2f/%.2f|retVu=%.2f/%.2f|retPk=%.2f/%.2f|vuRef=%.1f|trim=%.2f/%.2f",
+    ni::host::DiagLog::get().text ("METER", instNo_, "send=%.2f/%.2f|sendVu=%.2f/%.2f|sendPk=%.2f/%.2f|ret=%.2f/%.2f|retVu=%.2f/%.2f|retPk=%.2f/%.2f|vuRef=%.1f|trim=%.2f/%.2f|retRaw=%.2f/%.2f",
                                    d (s.rmsDb[0]), d (s.rmsDb[1]), d (s.vu[0]), d (s.vu[1]), d (s.peakDb[0]), d (s.peakDb[1]),
                                    d (r.rmsDb[0]), d (r.rmsDb[1]), d (r.vu[0]), d (r.vu[1]), d (r.peakDb[0]), d (r.peakDb[1]), d (vuRef_),
-                                   d (pSendTrim->get()), d (pReturnTrim->get()));
+                                   d (pSendTrim->get()), d (pReturnTrim->get()), d (w.rmsDb[0]), d (w.rmsDb[1]));   // retRaw: before the trim (dBu unit)
 }
 
 void NovaInsertProcessor::syncPdcMute()

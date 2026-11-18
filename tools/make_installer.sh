@@ -10,10 +10,19 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 BUILD="${1:-$ROOT/build-release}"; OUT="${2:-$ROOT/dist}"
 VST3="$BUILD/src/NovaInsert_artefacts/Release/VST3/NovaInsert.vst3"
+# Always bring the VST3 up to date with the tree first: 1.4.1 and 1.4.2 shipped a binary linked before the version bump
+# (tests/run_unit.sh builds the unit tests only), so the panel said 1.3.0 inside a 1.4.2 installer. NI_SKIP_BUILD=1 skips it.
+[ -n "${NI_SKIP_BUILD:-}" ] || cmake --build "$BUILD" --target NovaInsert_VST3 --parallel >/dev/null
 [ -d "$VST3" ] || { echo "no Release VST3 at $VST3 (build NovaInsert_VST3 first)" >&2; exit 2; }
 VERSION=$(sed -n 's/.*kVersion = "\([^"]*\)".*/\1/p' "$ROOT/src/engine/version.hpp"); [ -n "$VERSION" ] || { echo "version not found" >&2; exit 2; }
 PLIST_VER=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$VST3/Contents/Info.plist")
-[ "$PLIST_VER" = "$VERSION" ] || echo "note: bundle CFBundleShortVersionString $PLIST_VER != kVersion $VERSION (installer uses $VERSION)" >&2
+# a pre-release kVersion such as "1.4beta" cannot equal the numeric bundle version: only a release must match
+case "$VERSION" in *[!0-9.]*) ;; *) [ "$PLIST_VER" = "$VERSION" ] || { echo "bundle CFBundleShortVersionString $PLIST_VER != kVersion $VERSION: reconfigure and rebuild" >&2; exit 2; } ;; esac
+# the binary itself must carry this version (the string the panel shows), and nothing in src may be newer than it
+# (grep -c reads to the end: with pipefail, grep -q would close the pipe early and fail the pipeline through strings)
+strings -a "$VST3/Contents/MacOS/NovaInsert" | grep -cxF "$VERSION" >/dev/null || { echo "the built binary does not contain kVersion $VERSION: stale build in $BUILD" >&2; exit 2; }
+NEWER=$(find "$ROOT/src" "$ROOT/CMakeLists.txt" -type f -newer "$VST3/Contents/MacOS/NovaInsert" | head -n 5)
+[ -z "$NEWER" ] || { echo "sources newer than the built binary (stale build in $BUILD):" >&2; echo "$NEWER" >&2; exit 2; }
 WORK=$(mktemp -d "${TMPDIR:-/tmp}/novainsert-installer.XXXXXX"); trap 'rc=$?; rm -rf "$WORK"; exit $rc' EXIT
 mkdir -p "$WORK/root/Library/Audio/Plug-Ins/VST3" "$WORK/res" "$WORK/dmg" "$OUT"
 cp -R "$VST3" "$WORK/root/Library/Audio/Plug-Ins/VST3/"
