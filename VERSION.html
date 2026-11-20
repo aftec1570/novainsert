@@ -10,7 +10,20 @@ h1{font-size:28px;letter-spacing:.02em;margin:0 0 12px} h2{font-size:19px;margin
 a{color:var(--accent)} code{font:14px ui-monospace,Menlo,monospace} li{margin:6px 0} p:first-of-type{color:var(--dim)}
 </style></head><body><main>
 <h1>NovaInsert – version history</h1>
-<p>Latest version: <strong>1.4.3</strong> · <a href="https://github.com/aftec1570/novainsert/releases/latest">Download the latest release (macOS DMG, Windows zip, Linux tar.gz)</a> · <a href="https://github.com/aftec1570/novainsert/releases">All releases</a> · <a href="https://github.com/aftec1570/novainsert/blob/main/BUGS.md">Bug and fix ledger</a></p>
+<p>Latest version: <strong>1.4.4</strong> · <a href="https://github.com/aftec1570/novainsert/releases/latest">Download the latest release (macOS DMG, Windows zip, Linux tar.gz)</a> · <a href="https://github.com/aftec1570/novainsert/releases">All releases</a> · <a href="https://github.com/aftec1570/novainsert/blob/main/BUGS.md">Bug and fix ledger</a></p>
+<h2>1.4.4 – 2026-11-20</h2>
+<p>Bug-fix release for macOS, Windows and Linux. Projects, presets, calibrations and settings load unchanged.</p>
+<ul>
+<li><strong>Fix:</strong> choosing "No device" in the device list now sets the four channel offsets in SETUP back to 0.0 dB. Before, the offsets of the previously selected preset (for example the stored RETURN CAL result) stayed visible and active. The main send and return trims and LINK are not touched, and a project restore keeps the offsets the project saved (<a href="https://github.com/aftec1570/novainsert/blob/main/BUGS.md">#13</a>).</li>
+<li>Manual: chapters 6 and 10 say what "No device" does to the offsets.</li>
+<li>Validation: a new unit test (preset offsets, then "No device" gives 0.0 dB, then the preset again gives them back); the full unit suite on macOS, Windows and Linux; pluginval.</li>
+</ul>
+<p>SHA-256:</p>
+<ul>
+<li><code>NovaInsert-1.4.4-macOS-arm64.dmg</code>: <code>02eec279b644623032ffb3fa19fbf030aee372fb7009126456410cb90dc2f2fa</code></li>
+<li><code>NovaInsert-1.4.4-Windows-x64.zip</code>: <code>a822f9ee0ee47c34c0a339c1718f63933176fa17b7d87634c852a78bafddffb1</code></li>
+<li><code>NovaInsert-1.4.4-Linux-x86_64.tar.gz</code>: <code>87a9d80a6b680e5ce70e04dde8199fd2044d7d0123cb94dcb0eac755eba5f46f</code></li>
+</ul>
 <h2>1.4.3 – 2026-11-18</h2>
 <p>Bug-fix release for macOS, Windows and Linux. Projects, presets, calibrations and settings load unchanged.</p>
 <ul>

@@ -324,6 +324,15 @@ void NovaInsertProcessor::applyDeviceParameter()
     {
         ni::host::DiagLog::get().text ("PAIR", instNo_, "none");
         restore_.dropPending();
+        // A user selection of "No device" leaves no preset behind, so its per-channel offsets go back to 0.0 dB (the main trims and
+        // LINK stay: they are host parameters). A restore keeps what the project saved: setStateInformation sets the offsets from
+        // the stored CAL block after the device parameter, and a deferred restore claim must not clobber them either.
+        if (! restore)
+        {
+            const auto o = ni::plugin::offsetsForSelection (std::nullopt);
+            for (int ch = 0; ch < 2; ++ch) { sendOff_[ch] = o.send[ch]; retOff_[ch] = o.ret[ch]; }
+            ni::host::DiagLog::get().text ("CAL", instNo_, "offsets_cleared|no_device");
+        }
         if (const auto s = ni::engine::deviceClearedState (state()); s != state()) setState (s, Reason::DeviceSelection);   // no loop: no lock
         if (state() == State::Unavailable) evaluateHostState();
         return;

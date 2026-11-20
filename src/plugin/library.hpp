@@ -53,6 +53,16 @@ struct DeviceRecord
 #endif
 };
 
+// The per-channel offsets an instance shows for a user selection: the preset's own, or 0.0 dB for "No device" (no preset, so no
+// leftover from the previous one; forum report 2026-11-20). The main trims and LINK are not part of this.
+struct ChannelOffsets { float send[2] = { 0.0f, 0.0f }, ret[2] = { 0.0f, 0.0f }; };
+inline ChannelOffsets offsetsForSelection(const std::optional<DeviceRecord>& rec) noexcept
+{
+    ChannelOffsets o;
+    if (rec) for (int ch = 0; ch < 2; ++ch) { o.send[ch] = sanitizeOffsetDb(rec->sendOffsetDb[ch]); o.ret[ch] = sanitizeOffsetDb(rec->returnOffsetDb[ch]); }
+    return o;
+}
+
 // True when a and b differ only in the CAL defaults (trims, LINK, per-channel offsets) and the version they bump: a project
 // snapshot that differs from the library record only there is "DefaultsChanged", not a different device.
 bool sameExceptDefaults(const DeviceRecord& a, const DeviceRecord& b);

@@ -1,7 +1,24 @@
 # NovaInsert – version history
 
-Latest version: **1.4.3** · [Download the latest release (macOS DMG, Windows zip, Linux tar.gz)](https://github.com/aftec1570/novainsert/releases/latest) ·
+Latest version: **1.4.4** · [Download the latest release (macOS DMG, Windows zip, Linux tar.gz)](https://github.com/aftec1570/novainsert/releases/latest) ·
 [All releases](https://github.com/aftec1570/novainsert/releases) · [Bug and fix ledger](BUGS.md)
+
+## 1.4.4 – 2026-11-20
+
+Bug-fix release for macOS, Windows and Linux. Projects, presets, calibrations and settings load unchanged.
+
+- **Fix:** choosing "No device" in the device list now sets the four channel offsets in SETUP back to 0.0 dB. Before, the
+  offsets of the previously selected preset (for example the stored RETURN CAL result) stayed visible and active. The main
+  send and return trims and LINK are not touched, and a project restore keeps the offsets the project saved
+  ([BUGS.md #13](BUGS.md)).
+- Manual: chapters 6 and 10 say what "No device" does to the offsets.
+- Validation: a new unit test (preset offsets, then "No device" gives 0.0 dB, then the preset again gives them back); the
+  full unit suite on macOS, Windows and Linux; pluginval.
+
+SHA-256:
+- `NovaInsert-1.4.4-macOS-arm64.dmg`: `02eec279b644623032ffb3fa19fbf030aee372fb7009126456410cb90dc2f2fa`
+- `NovaInsert-1.4.4-Windows-x64.zip`: `a822f9ee0ee47c34c0a339c1718f63933176fa17b7d87634c852a78bafddffb1`
+- `NovaInsert-1.4.4-Linux-x86_64.tar.gz`: `87a9d80a6b680e5ce70e04dde8199fd2044d7d0123cb94dcb0eac755eba5f46f`
 
 ## 1.4.3 – 2026-11-18
 

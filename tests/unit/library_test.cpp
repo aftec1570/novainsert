@@ -675,3 +675,26 @@ TEST_CASE("library: a directory path in the platform's native form reads and wri
     REQUIRE(back.load() == DeviceLibrary::LoadStatus::Ok);
     REQUIRE(back.devices().at(0).name == "Unit A renamed");
 }
+
+TEST_CASE("No device resets the per-channel offsets, selecting a preset again brings its own back")
+{
+    DeviceRecord r;
+    r.id = "unit-a"; r.name = "Unit A";
+    r.returnOffsetDb[0] = -0.1f; r.returnOffsetDb[1] = 0.1f; r.sendOffsetDb[0] = 0.3f; r.sendOffsetDb[1] = -0.2f;
+    r.sendTrimDb = 2.0f; r.returnTrimDb = -1.0f;   // main trims are not part of the offsets
+
+    auto o = offsetsForSelection(r);   // preset selected: its stored offsets
+    CHECK(o.ret[0] == -0.1f); CHECK(o.ret[1] == 0.1f);
+    CHECK(o.send[0] == 0.3f); CHECK(o.send[1] == -0.2f);
+
+    o = offsetsForSelection(std::nullopt);   // "No device": 0.0 dB, no leftover
+    CHECK(o.ret[0] == 0.0f); CHECK(o.ret[1] == 0.0f);
+    CHECK(o.send[0] == 0.0f); CHECK(o.send[1] == 0.0f);
+
+    o = offsetsForSelection(r);   // the same preset again: defaults back
+    CHECK(o.ret[0] == -0.1f); CHECK(o.ret[1] == 0.1f);
+    CHECK(o.send[0] == 0.3f); CHECK(o.send[1] == -0.2f);
+
+    r.returnOffsetDb[0] = 99.0f;   // out-of-range values are clamped as everywhere else
+    CHECK(offsetsForSelection(r).ret[0] == sanitizeOffsetDb(99.0f));
+}

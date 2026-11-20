@@ -1,12 +1,12 @@
 # NovaInsert User Manual
 
-Version 1.4.3 · November 2026 · REAPER-only VST3 hardware insert for macOS (Apple silicon) · by Hillside Studios, [hillsidestudio.io](https://hillsidestudio.io)
+Version 1.4.4 · November 2026 · REAPER-only VST3 hardware insert for macOS (Apple silicon) · by Hillside Studios, [hillsidestudio.io](https://hillsidestudio.io)
 
 ![NovaInsert in REAPER](img/reaper_window.png)
 
 NovaInsert puts a piece of outboard gear into a REAPER track like any other plug-in. It sends the track to a physical output of your audio interface, takes the return from a physical input, measures the exact round-trip delay through the converters, cables and the device itself, and tells REAPER that delay so the return lines up to the sample. It also keeps the analog levels where the outboard expects them, with VU meters, trims and a one-press level calibration.
 
-This manual covers version 1.4.3. The plug-in is free to use and comes as is, without any warranty. Read the safety notice in chapter 2 before you connect anything.
+This manual covers version 1.4.4. The plug-in is free to use and comes as is, without any warranty. Read the safety notice in chapter 2 before you connect anything.
 
 ## 1. What NovaInsert does
 
@@ -43,7 +43,7 @@ You are responsible for the routing, the monitoring level and the hardware. See 
 
 **Install from the DMG**
 
-1. Open the DMG and double-click "Install NovaInsert 1.4.3.pkg".
+1. Open the DMG and double-click "Install NovaInsert 1.4.4.pkg".
 2. Read and accept the license agreement, then let the installer copy the plug-in to `/Library/Audio/Plug-Ins/VST3`.
 3. The package is signed with an Apple Developer ID and notarized by Apple, so macOS opens it directly without a security prompt.
 4. In REAPER open Options, Preferences, Plug-ins, VST and press "Re-scan". Add "VST3: NovaInsert" to a track.
@@ -135,6 +135,8 @@ Selecting a device does three things at once:
 1. The FX slot in the mixer and the FX chain takes the device name. "No device" restores "NovaInsert". A manual rename of the slot is reverted.
 2. The instance claims the physical channels. From now on this instance alone reads the inputs and writes the outputs.
 3. In Insert mode the latency measurement starts, or a stored calibration for the same interface, channels, buffer size and routing is re-applied.
+
+Choosing "No device" also sets the channel offsets (SETUP) back to 0.0 dB, so nothing of the previous preset stays visible; the send and return trims and LINK are not touched.
 
 ![No device selected](img/no_device.png)
 
@@ -264,7 +266,7 @@ CAL is refused, with a message, while recording, without an owned device, and wh
 | Return: dBu at 0 dBFS | the same for the input |
 | 0 VU reference | −20 dBFS, −18 dBFS or a custom value from −30 to −6 dBFS; both meters with the dBFS unit and the CAL maths follow it |
 | Outboard max input | optional marker on the SEND scale |
-| Channel offsets | per-channel fine trims in 0.1 dB steps for L and R on the send and the return, on top of the main trims; the R rows are enabled for a stereo send / return |
+| Channel offsets | per-channel fine trims in 0.1 dB steps for L and R on the send and the return, on top of the main trims; the R rows are enabled for a stereo send / return; choosing "No device" resets them to 0.0 dB |
 | Skin | DARK (default), IVORY or SILVER: the colour scheme of the whole editor (below). One setting for all instances, stored in `settings.json`; every open editor follows within a second |
 | Editor size | 75, 100, 125 or 150 % |
 | Mouse wheel: Reverse | turns the trim knobs the other way on the mouse wheel. By default wheel up raises a trim, following the macOS scroll setting; tick this if your mouse's direction is set by a utility (Logi Options+, Mos, Scroll Reverser, LinearMouse…) and the knobs turn backwards. One setting for all instances, stored in `settings.json` |
@@ -400,7 +402,7 @@ The snapshot means a later edit of the library cannot change how an old project 
 | Loop gain outside the trim range | the return differs from the send by more than the trims can correct | check the unit's gain structure |
 | CAL needs Insert mode / is not available while recording / Select a free device first / Wait for the latency measurement | CAL preconditions | see chapter 9 |
 
-## 19. Limitations of version 1.4.3
+## 19. Limitations of version 1.4.4
 
 - 44.1, 48, 88.2, 96 or 192 kHz (hardware-validated on the Apollo at all five; change the rate only with the transport stopped, every loop then re-measures on its own), REAPER 7.6 or newer (tested on 7.83, 7.84, 7.85 and 7.86), macOS Apple silicon, VST3 only.
 - Presets are stored by position: deleting one shifts the later ones in projects that have not been reopened since (chapter 4).

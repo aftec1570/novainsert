@@ -19,6 +19,7 @@ Latest version: [download](https://github.com/aftec1570/novainsert/releases/late
 | 10 | 2026-11-17 | Windows: saving a preset or calibration can fail with "write failed" now and then | Fixed | 1.4.2 |
 | 11 | 2026-11-18 | macOS: the panel of 1.4.1 and 1.4.2 says 1.3.0 | Fixed | 1.4.3 |
 | 12 | 2026-11-18 | With the unit on dBu the RETURN meter follows the return trim, so it is not the hardware level | Changed | 1.4.3 |
+| 13 | 2026-11-20 | "No device" keeps the channel offsets of the previous preset | Fixed | 1.4.4 |
 
 ## #1 – Mouse wheel direction on trim knobs is reversed
 
@@ -164,3 +165,16 @@ Latest version: [download](https://github.com/aftec1570/novainsert/releases/late
   trim; with the unit on dBFS they show the level after the trim against the SETUP 0 VU reference. The CLIP lamp was
   already judged on the raw input. The audio path is unchanged. Manual chapters 4, 8 and 10 rewritten accordingly.
 - **Verified:** a new unit test feeds a known level through a −3 dB return trim and reads both taps.
+
+## #13 – "No device" keeps the channel offsets of the previous preset
+
+- **Reported:** 2026-11-20 in the REAPER forum thread, post by sguyader (Return L −0.1 dB / Return R +0.1 dB, the stored
+  RETURN CAL result of the preset, stayed visible in SETUP after switching to "No device").
+- **Symptom:** after choosing "No device" the SETUP channel offsets still showed the values of the preset selected before.
+- **Cause:** selecting "No device" released the channels and cleared the state but left the instance's per-channel offsets
+  untouched; only selecting a preset replaced them.
+- **Change (1.4.4):** a user selection of "No device" sets the four channel offsets back to 0.0 dB. The main send and
+  return trims and LINK (host parameters) are not touched. A project restore is not a selection: it keeps the offsets the
+  project saved. Selecting a preset again applies that preset's defaults as before. Manual chapters 6 and 10 say so.
+- **Verified:** a new unit test (preset offsets, then "No device" gives 0.0 dB, then the preset again gives them back); full
+  unit suite, see the commit message.
