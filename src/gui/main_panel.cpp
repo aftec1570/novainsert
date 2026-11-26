@@ -100,13 +100,23 @@ MainPanel::MainPanel()
     recalibrate.onClick = [this] { if (onRecalibrate) onRecalibrate(); };
     devicesButton.getProperties().set ("ni", "hw");
     devicesButton.onClick = [this] { showDevices (! devices.isVisible()); };
+    polarity.setButtonText (juce::String (juce::CharPointer_UTF8 ("\xc3\x98 INV")));
+    polarity.getProperties().set ("ni", "hw");
+    polarity.setClickingTogglesState (true);
+    polarity.onClick = [this] { if (onPolarity) onPolarity (polarity.getToggleState()); };
+    polarity.setTooltip ("Return polarity: lit = the return is multiplied by -1 (both channels), for a unit that inverts the signal. Stored with the preset, not automatable");
+    setPolarity.setButtonText ("SET POLARITY SWITCH");
+    setPolarity.getProperties().set ("ni", "hw");
+    setPolarity.setTooltip ("Set the polarity switch: the measurement found the return inverted, so the switch is turned on");
+    setPolarity.onClick = [this] { if (onPolarity) onPolarity (true); };
     reapply.getProperties().set ("ni", "hw");
     reapply.onClick = [this] { if (onReapply) onReapply(); };
     for (juce::Component* c : { (juce::Component*) &sendCal, (juce::Component*) &returnCal, (juce::Component*) &link,
                                 (juce::Component*) &setupButton, (juce::Component*) &recalibrate, (juce::Component*) &devicesButton, (juce::Component*) &mode, (juce::Component*) &sendSel,
-                                (juce::Component*) &returnSel, (juce::Component*) &sendPeak_, (juce::Component*) &returnClip_ })
+                                (juce::Component*) &returnSel, (juce::Component*) &sendPeak_, (juce::Component*) &returnClip_, (juce::Component*) &polarity })
         addAndMakeVisible (c);
     addChildComponent (reapply);
+    addChildComponent (setPolarity);
 
     setup.onClose = [this] { showSetup (false); };
     addChildComponent (setup);
@@ -186,10 +196,18 @@ void MainPanel::resized()
     setupButton.setBounds (kX0, kText.getY(), kSetupW, kSetupH);
     recalibrate.setBounds (kX0, kText.getY() + kSetupH + 4, kSetupW, kSetupH);   // user 2026-11-06: under SETUP
     jassert (returnSel.getRight() + 8 <= devicesButton.getX());   // user 2026-11-06: RETURN's R cell sat under DEVICES (cell pad 20 + 10 overflowed)
-    reapply.setBounds (kText.getRight() - 230, kText.getY(), 230, 28);
+    polarity.setBounds (kStripR.getX() + 6, y0 + 88, 52, 26);   // left of the CLIP caption, under the RETURN CAL button
+    layoutStatusButtons();
 
     setup.setBounds (kX0 - 6, kMeterY - 6, kInnerW + 12, kStripY + kStripH - kMeterY + 12);
     devices.setBounds (setup.getBounds());
+}
+
+void MainPanel::layoutStatusButtons()
+{
+    // the status row's right end: RE-APPLY ANTICIPATIVE FX, and left of it SET POLARITY SWITCH while the flag shows
+    reapply.setBounds (kText.getRight() - 230, kText.getY(), 230, 28);
+    setPolarity.setBounds ((reapply.isVisible() ? reapply.getX() - 8 : kText.getRight()) - 190, kText.getY(), 190, 28);
 }
 
 juce::String MainPanel::readout (const Reading& r, bool send) const
@@ -251,6 +269,10 @@ void MainPanel::update (const ViewInputs& source, int selectedDevice, const std:
     sendCal.setToggleState (in.calStatus == 1, juce::dontSendNotification);
     returnCal.setToggleState (in.calStatus == 2 || in.calStatus == 3, juce::dontSendNotification);
     reapply.setVisible (vm_.showReapplyAnticipative);
+    setPolarity.setVisible (vm_.polarityFlag);
+    layoutStatusButtons();
+    polarity.setToggleState (in.polarityInverted, juce::dontSendNotification);
+    polarity.setEnabled (! in.deviceName.empty());
     recalibrate.setEnabled (vm_.recalibrateEnabled);
     sendTrim.reverseWheel = returnTrim.reverseWheel = in.reverseWheel;
     setup.setValues (in, sizePercent_);
@@ -262,7 +284,7 @@ void MainPanel::update (const ViewInputs& source, int selectedDevice, const std:
     const juce::String key = sendReadout_ + "|" + returnReadout_ + "|" + footer_ + "|" + juce::String (vm_.calText) + "|"
                              + juce::String (vm_.failureReason) + "|" + juce::String (vm_.noteText) + "|" + juce::String (vm_.progressText) + "|"
                              + juce::String (vm_.showLeadInHint ? 1 : 0) + juce::String (vm_.calError ? 1 : 0) + juce::String (link.getToggleState() ? 1 : 0) + "|"
-                             + juce::String (vm_.warnings.size()) + (vm_.warnings.empty() ? juce::String() : juce::String (vm_.warnings.front()));
+                             + juce::String (vm_.polarityFlag ? 1 : 0) + juce::String (in.polarityInverted ? 1 : 0) + "|" + juce::String (vm_.warnings.size()) + (vm_.warnings.empty() ? juce::String() : juce::String (vm_.warnings.front()));
     if (key != paintKey_) { paintKey_ = key; repaint(); }
 }
 
@@ -328,12 +350,16 @@ void MainPanel::paint (juce::Graphics& g)
     if (! vm_.progressText.empty()) lines.emplace_back (juce::String (vm_.progressText), ink::cream);
     if (! vm_.calText.empty()) lines.emplace_back (juce::String (vm_.calText), vm_.calError ? juce::Colour (sk().error) : ink::cream);
     if (! vm_.failureReason.empty()) lines.emplace_back (juce::String (vm_.failureReason), juce::Colour (sk().error));
+    if (vm_.polarityFlag) lines.emplace_back (juce::String (vm_.polarityFlagText), ink::warn);
     for (const auto& w : vm_.warnings) lines.emplace_back (juce::String (w), ink::warn);
     if (! vm_.noteText.empty()) lines.emplace_back (juce::String (vm_.noteText + " – see SETUP"), ink::label);
     if (vm_.showLeadInHint) lines.emplace_back ("Tip: enable the pre-roll lead-in so renders start with the loop already filled", ink::dim);
     const int textX = setupButton.getRight() + 12;   // SETUP holds the row's left end
     auto area = kText.withLeft (textX);
-    const int textW = (reapply.isVisible() ? reapply.getX() - 12 : kText.getRight()) - textX;   // the re-apply button sits at the right end
+    int rightEdge = kText.getRight();   // the status-row buttons sit at the right end
+    if (setPolarity.isVisible()) rightEdge = setPolarity.getX();
+    else if (reapply.isVisible()) rightEdge = reapply.getX();
+    const int textW = (rightEdge == kText.getRight() ? rightEdge : rightEdge - 12) - textX;
     for (size_t i = 0; i < lines.size() && i < 3; ++i)
         text (lines[i].first, area.removeFromTop (15).withWidth (textW), uiFont (12.0f, i == 0 && (! vm_.progressText.empty() || ! vm_.calText.empty())), lines[i].second,
               juce::Justification::centredLeft);

@@ -1,7 +1,34 @@
 # NovaInsert – version history
 
-Latest version: **1.4.4** · [Download the latest release (macOS DMG, Windows zip, Linux tar.gz)](https://github.com/aftec1570/novainsert/releases/latest) ·
+Latest version: **1.5.0** · [Download the latest release (macOS DMG, Windows zip, Linux tar.gz)](https://github.com/aftec1570/novainsert/releases/latest) ·
 [All releases](https://github.com/aftec1570/novainsert/releases) · [Bug and fix ledger](BUGS.md)
+
+## 1.5.0 – 2026-11-26
+
+Feature release for macOS, Windows and Linux. Projects, presets, calibrations and settings load unchanged.
+
+- **New:** a return polarity switch per unit (NORMAL or INVERTED, default NORMAL). INVERTED multiplies the returned
+  samples by -1 right after capture and before the return trim, in Insert and Effect mode, on both channels of a stereo
+  return together. It is sample-exact and adds no latency. The switch is a set-up value of the preset, not a host
+  parameter, so it cannot be automated.
+- **GUI:** "Ø INV" in the RETURN strip and "Return polarity" in PRESET SETUP. When the measurement finds the return
+  inverted and the switch is on NORMAL, the status line says "Return is inverted" and a "SET POLARITY SWITCH" button sets
+  the switch in one click. When the switch is already INVERTED, no flag shows. Lock decisions are unchanged.
+- **Files:** the device record carries a `polarityInverted` value (the library file stays schema 1, so 1.4.x still reads
+  it and ignores the value). A library or project from an earlier version has no such value and loads as NORMAL. The
+  project snapshot carries the switch.
+- Manual: chapter 9 describes the switch and the flag, chapters 4, 5 and 16 mention it.
+- Validation: new unit tests (exact negation for Insert and Effect, mono and stereo; record round trip; an old library
+  reads as NORMAL; the flag logic); the full unit suite on macOS (release, debug, ASan, TSan); a live REAPER null test (a
+  render with the switch on is the exact negation of a render with it off) on a BlackHole loopback; unit tests and
+  pluginval in CI on Windows and Linux, and the Linux container test rig with REAPER on a JACK loopback. No analog
+  hardware bench run for this release.
+
+SHA-256:
+- `NovaInsert-1.5.0-macOS-arm64.dmg`: `38f1b64c20e4d8bd2177ab848b78a76df1bb3484b9a23fcbe3d3711bde4c86a7`
+- `NovaInsert-1.5.0-Windows-x64.zip`: `76601b04386dad4a3ebe79acc917bc5bb7fbf5c06e6d7a07a7e9e4ecb35446c1`
+- `NovaInsert-1.5.0-Linux-x86_64.tar.gz`: `08fa89c93a677887af2b2210fd13f036f35a8f2f2a36ca198ce10307432d7fd7`
+- `NovaInsert-1.5.0-User-Manual.pdf`: `55a0369a9760fc1578ad8ce817a3d792b525748aec3a274346a506fa8f2813e1`
 
 ## 1.4.4 – 2026-11-20
 

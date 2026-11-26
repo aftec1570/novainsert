@@ -85,6 +85,17 @@ constexpr bool recalibrationOffered(State s, bool openFallback) noexcept
     return s == State::Failed || (openFallback && (s == State::Locked || s == State::ApplyingLatency || s == State::Stale));
 }
 
+// Return polarity (D2, 1.5.0). The measurement detects an inverted return (correlator, CalibResult::negativePolarity per channel);
+// it is accepted, never a lock failure. The unit has ONE polarity switch for both channels, so the loop counts as inverted when
+// every channel it measured is: with one channel inverted and the other not, flipping both would not repair it.
+constexpr bool returnDetectedInverted(const bool negativePolarity[2], bool retStereo) noexcept
+{
+    return negativePolarity[0] && (! retStereo || negativePolarity[1]);
+}
+// The flag "return is inverted" (with its one-click "Set polarity switch"): detected inverted while the switch is on normal. With
+// the switch on inverted there is no flag (the hardware's inversion is compensated).
+constexpr bool polarityFlag(bool detectedInverted, bool switchInverted) noexcept { return detectedInverted && ! switchInverted; }
+
 // Calibration key (F1 §4): every field must match for a stored calibration to be reused. The library id is stored beside
 // the key, never inside it.
 struct CalibKey

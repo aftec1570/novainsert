@@ -53,6 +53,9 @@ struct Routing
     // per-channel offsets on top of the ganged trims (VU GUI spec: per-channel CAL); effective gain = trim + offset_ch.
     // Mono uses [0] for both the send and the return.
     float sendOffsetDb[2] = { 0.0f, 0.0f }, returnOffsetDb[2] = { 0.0f, 0.0f };
+    // Per-unit return polarity (D2, 1.5.0): the return is multiplied by -1 after the capture and before the return trim, both
+    // channels of the unit together (no per-channel polarity). A set-up value of the unit, never a host parameter.
+    bool returnInverted = false;
 };
 
 // Flush-to-zero / denormals-are-zero for the scope (restores the caller's mode on exit).
@@ -124,6 +127,7 @@ public:
             retOffDb_[c].store(r.returnOffsetDb[c], std::memory_order_relaxed);
         }
         setTrims(r.sendTrimDb, r.returnTrimDb);
+        retInverted_.store(r.returnInverted, std::memory_order_relaxed);
         route_.store((r.sendStereo ? 1u : 0u) | (r.retStereo ? 2u : 0u), std::memory_order_release);
     }
 
@@ -136,6 +140,10 @@ public:
             retGain_[c].store(dbToGain(returnDb + retOffDb_[c].load(std::memory_order_relaxed)), std::memory_order_relaxed);
         }
     }
+
+    // Any thread, RT-safe (one atomic): the unit's return polarity; taken at the start of the next block (a flip is a step of the
+    // return, as a polarity switch on the hardware would be). Insert and Effect mode share this path.
+    void setReturnInverted(bool inverted) noexcept { retInverted_.store(inverted, std::memory_order_relaxed); }
 
     // R >= physLoop + 2 blocks (F1 §3 margin) and R <= L_max (F1 §23 Q8). A change starts a new segment at the next block.
     bool setLatency(int32_t physLoop, int32_t reportedR) noexcept
@@ -206,6 +214,7 @@ public:
 
         const uint32_t rt = route_.load(std::memory_order_acquire);
         const bool sendStereo = (rt & 1u) != 0, retStereo = (rt & 2u) != 0;
+        const float retSign = retInverted_.load(std::memory_order_relaxed) ? -1.0f : 1.0f;   // one read per block: both channels flip together
         // gains: from the applied value to the target across this block (a linear ramp), constant (bit-exact) when unchanged
         struct Ramp { float from, to, step; bool on; };
         Ramp sr[2], rr[2];
@@ -258,7 +267,7 @@ public:
             while ((f = ret_->peek()) != nullptr && (f->gen < curGen_ || (f->gen == curGen_ && f->pos < want))) ret_->drop();
             if (f != nullptr && f->gen == curGen_ && f->pos == want)
             {
-                if (want >= curP0_) { a = f->l; b = f->r; }
+                if (want >= curP0_) { a = f->l * retSign; b = f->r * retSign; }   // polarity before the trim; multiplying by -1 is exact
                 hit = true; ret_->drop();
             }
             else if (fwValid && want >= fw) ++underruns_;
@@ -529,6 +538,7 @@ private:
     int32_t lMax_ = kLMax;
     std::atomic<int32_t> physLoop_ { 0 }, R_ { 0 };
     std::atomic<uint32_t> latencySeq_ { 0 }, route_ { 3u };
+    std::atomic<bool> retInverted_ { false };   // return polarity switch (message thread -> processBlock)
     std::atomic<float> sendGain_[2] { 1.0f, 1.0f }, retGain_[2] { 1.0f, 1.0f };   // targets (trim + offset, linear)
     std::atomic<float> sendOffDb_[2] { 0.0f, 0.0f }, retOffDb_[2] { 0.0f, 0.0f };
     std::atomic<bool> fenced_ { false }, muted_ { false };

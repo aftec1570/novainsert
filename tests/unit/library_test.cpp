@@ -698,3 +698,66 @@ TEST_CASE("No device resets the per-channel offsets, selecting a preset again br
     r.returnOffsetDb[0] = 99.0f;   // out-of-range values are clamped as everywhere else
     CHECK(offsetsForSelection(r).ret[0] == sanitizeOffsetDb(99.0f));
 }
+
+// ---- return polarity per unit (1.5.0, design D2) ----
+
+TEST_CASE("library_polarity_defaults_to_normal_and_round_trips")
+{
+    const auto d = tempDir("polrt");
+    DeviceLibrary lib(d);
+    lib.load();
+    REQUIRE_FALSE(DeviceRecord {}.polarityInverted);
+    DeviceRecord a = rec("a", "Normal unit"), b = rec("b", "Inverted unit");
+    b.polarityInverted = true;
+    REQUIRE(lib.upsertDevice(a));
+    REQUIRE(lib.upsertDevice(b));
+    DeviceLibrary back(d);
+    REQUIRE(back.load() == DeviceLibrary::LoadStatus::Ok);
+    REQUIRE_FALSE(back.device("a")->polarityInverted);
+    REQUIRE(back.device("b")->polarityInverted);
+    auto g = *back.device("b");
+    b.version = g.version;
+    REQUIRE(g == b);   // the whole record, polarity included
+    // switching it back writes normal again
+    g.polarityInverted = false;
+    REQUIRE(back.upsertDevice(g));
+    DeviceLibrary again(d);
+    again.load();
+    REQUIRE_FALSE(again.device("b")->polarityInverted);
+}
+
+TEST_CASE("library_old_libraries_load_as_normal_polarity_and_keep_it_when_rewritten")
+{
+    // 1.4.x and older files have no polarity key (schema 1, and the pre-schema file the migration still reads): normal
+    for (const char* schema : { R"("schema":1,)", "" })
+    {
+        const auto d = tempDir("polold");
+        writeFile(d / "devices.json", (std::string("{") + schema + R"("devices":[
+          {"id":"a","name":"A","stereo":true,"out":[2,3],"in":[2,3],"sendTrimDb":-2.0,"link":true},
+          {"id":"b","name":"B","sendStereo":false,"returnStereo":false,"out":[4],"in":[4],"mode":1}]})").c_str());
+        DeviceLibrary lib(d);
+        const auto st = lib.load();
+        REQUIRE((st == DeviceLibrary::LoadStatus::Ok || st == DeviceLibrary::LoadStatus::OldSchemaMigrated));
+        REQUIRE(lib.devices().size() == 2);
+        for (const auto& r : lib.devices()) REQUIRE_FALSE(r.polarityInverted);
+        REQUIRE(lib.device("a")->sendTrimDb == -2.0f);   // everything else unchanged
+        REQUIRE(lib.device("a")->link);
+        auto a = *lib.device("a");
+        a.name = "A renamed";
+        REQUIRE(lib.upsertDevice(a));   // a later write of an old record does not turn it inverted
+        DeviceLibrary back(d);
+        back.load();
+        for (const auto& r : back.devices()) REQUIRE_FALSE(r.polarityInverted);
+        REQUIRE(back.device("b")->mode == ni::engine::Mode::Effect);
+    }
+}
+
+TEST_CASE("library_polarity_alone_differs_only_in_the_defaults")
+{
+    DeviceRecord a = rec("s", "S"), b = a;
+    b.polarityInverted = true;
+    REQUIRE(a != b);
+    REQUIRE(sameExceptDefaults(a, b));   // a project snapshot with the other polarity is "defaults changed", not another device
+    b.out[0] = 5;
+    REQUIRE_FALSE(sameExceptDefaults(a, b));
+}

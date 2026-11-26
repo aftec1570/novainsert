@@ -796,6 +796,7 @@ void NovaInsertProcessor::syncInstance()
     }
     ni::engine::Routing routing { eff.sendStereo, eff.retStereo, pSendTrim->get(), pReturnTrim->get() };
     for (int ch = 0; ch < 2; ++ch) { routing.sendOffsetDb[ch] = sendOff_[ch]; routing.returnOffsetDb[ch] = retOff_[ch]; }
+    routing.returnInverted = runningRec_ && runningRec_->polarityInverted;   // a set-up value of the unit's record (never a host parameter)
     const int packed = (pSendSel->getIndex() << 2) | pReturnSel->getIndex();
     if (! (want == loopCfg_))
     {
@@ -1129,6 +1130,9 @@ ni::gui::ViewInputs NovaInsertProcessor::viewInputs() const
     in.defaultsChanged = defaultsChanged_;
     if (rec) { in.sendDbuAt0dBFS = rec->sendDbuAt0dBFS; in.returnDbuAt0dBFS = rec->returnDbuAt0dBFS; in.outboardMaxInDbu = rec->outboardMaxInDbu; }
     in.vuRefDbfs = vuRef_;
+    in.polarityInverted = rec && rec->polarityInverted;
+    in.polarityDetectedInverted = lastCalib_ && lastCalib_->result.failReason == Reason::None
+                                  && ni::engine::returnDetectedInverted (lastCalib_->result.negativePolarity, eff.retStereo);
     in.calStatus = static_cast<int> (calStatus());
     in.sendTrimDb = pSendTrim->get(); in.returnTrimDb = pReturnTrim->get();
     for (int ch = 0; ch < 2; ++ch) { in.sendOffsetDb[ch] = sendOff_[ch]; in.returnOffsetDb[ch] = retOff_[ch]; }
@@ -1487,6 +1491,28 @@ void NovaInsertProcessor::setConverterCal (float sendDbu, float returnDbu, float
     if (ok) { vuRef_ = vuRef; adoptLibraryRecord (lib->id); }
     ni::host::DiagLog::get().text ("CAL", instNo_, "converter|id=%s|ok=%d|send=%.1f|ret=%.1f|vu=%.1f", lib->id.c_str(), ok ? 1 : 0,
                                    static_cast<double> (sendDbu), static_cast<double> (returnDbu), static_cast<double> (vuRef));
+}
+
+bool NovaInsertProcessor::setPolarityInverted (bool inverted)
+{
+    const auto rec = activeRecord();
+    if (! rec || ! library_) return false;
+    auto lib = library_->device (rec->id);
+    if (! lib) return false;
+    bool ok = true;
+    if (lib->polarityInverted != inverted)
+    {
+        lib->polarityInverted = inverted;
+        ok = library_->upsertDevice (*lib);
+        realignClaim();
+    }
+    if (ok)
+    {
+        adoptLibraryRecord (lib->id);   // the kept project snapshot and the running record follow
+        if (inst_) inst_->engine().setReturnInverted (inverted);   // one atomic; the tick's setRouting keeps it
+    }
+    ni::host::DiagLog::get().text ("CAL", instNo_, "polarity|id=%s|ok=%d|inverted=%d", lib->id.c_str(), ok ? 1 : 0, inverted ? 1 : 0);
+    return ok;
 }
 
 void NovaInsertProcessor::setOffsets (std::array<float, 2> send, std::array<float, 2> ret)

@@ -94,6 +94,7 @@ DeviceRecord toDevice(const juce::var& v)
     if (v.hasProperty("outboardMaxInDbu")) r.outboardMaxInDbu = flt(v, "outboardMaxInDbu", 0.0f);
     r.link = static_cast<bool>(v.getProperty("link", false));
     readFloatPair(v, "sendOffsetDb", r.sendOffsetDb); readFloatPair(v, "returnOffsetDb", r.returnOffsetDb);
+    r.polarityInverted = static_cast<bool>(v.getProperty("polarityInverted", false));   // absent in records before 1.5.0: normal
     return r;
 }
 juce::var fromDevice(const DeviceRecord& r)
@@ -111,6 +112,7 @@ juce::var fromDevice(const DeviceRecord& r)
     if (r.outboardMaxInDbu) o->setProperty("outboardMaxInDbu", *r.outboardMaxInDbu);
     o->setProperty("link", r.link);
     o->setProperty("sendOffsetDb", floatPair(r.sendOffsetDb)); o->setProperty("returnOffsetDb", floatPair(r.returnOffsetDb));
+    o->setProperty("polarityInverted", r.polarityInverted);
     return juce::var(o);
 }
 
@@ -224,7 +226,7 @@ bool sameExceptDefaults(const DeviceRecord& a, const DeviceRecord& b)
     DeviceRecord x = a, y = b;
     for (auto* r : { &x, &y })
     {
-        r->sendTrimDb = r->returnTrimDb = 0.0f; r->link = false; r->version = 0;
+        r->sendTrimDb = r->returnTrimDb = 0.0f; r->link = false; r->version = 0; r->polarityInverted = false;
         r->sendOffsetDb[0] = r->sendOffsetDb[1] = r->returnOffsetDb[0] = r->returnOffsetDb[1] = 0.0f;
     }
     return x == y;

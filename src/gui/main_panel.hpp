@@ -70,6 +70,7 @@ public:
     double linkedUserValue (TrimKnob& self, TrimKnob& other, double attempted);   // LINK's limit + the other trim's opposite move
 
     TrimKnob sendTrim, returnTrim;
+    juce::TextButton polarity, setPolarity { "SET POLARITY SWITCH" };   // return polarity switch (D2) and the one-click fix of the "return is inverted" flag
     juce::TextButton link, sendCal { "CAL +4 dBu" }, returnCal { "CAL" }, setupButton, recalibrate { "RE-CALIBRATION" }, devicesButton { "PRESET SETUP" }, reapply { "RE-APPLY ANTICIPATIVE FX" };
     Segment mode { { "INSERT", "EFFECT" }, 16 }, sendSel { { "STEREO", "L", "R" }, 16 }, returnSel { { "STEREO", "L", "R" }, 16 }, meterView { { "VU", "TUBE", "LED", "TWIN" }, 11 }, meterUnit { { "dBu", "dBFS" }, 12 };
     juce::ComboBox device;
@@ -79,6 +80,7 @@ public:
     std::function<void (int deviceIndex)> onSelectDevice;   // 0 = none, else library index + 1
     std::function<void (int action)> onCal;                  // 1 = SEND CAL toggle, 2 = RETURN CAL, 3 = cancel
     std::function<void()> onReapply;
+    std::function<void (bool inverted)> onPolarity;          // the return polarity switch of the running unit (main panel, flag button)
     std::function<void()> onRecalibrate;                     // RE-CALIBRATION under SETUP (user 2026-11-06)
     std::function<void (int view)> onMeterView;              // the user switched the meter view (stored in settings.json, global)
     std::function<void (int unit)> onMeterUnit;              // the user switched the meter unit (same kind of preference)
@@ -87,6 +89,7 @@ public:
     void resized() override;
 
 private:
+    void layoutStatusButtons();
     juce::String readout (const Reading&, bool send) const;
 
     NovaLookAndFeel lnf_;

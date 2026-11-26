@@ -41,6 +41,10 @@ struct DeviceRecord
     std::optional<float> outboardMaxInDbu;
     bool link = false;
     float sendOffsetDb[2] = { 0.0f, 0.0f }, returnOffsetDb[2] = { 0.0f, 0.0f };
+    // Return polarity of the unit (1.5.0, design D2): false = normal, true = inverted (the return is multiplied by -1 after the
+    // capture and before the return trim, both channels together). A set-up value of the unit, not a host parameter. Records
+    // written before 1.5.0 have no such key and read as normal; the key is additive, so the file schema stays 1.
+    bool polarityInverted = false;
 
     // Exact field equality (DEVICES page dirty tracking, snapshot diff): a stored float equals itself bit for bit.
 #if defined(__GNUC__)   // clang and gcc
@@ -63,7 +67,7 @@ inline ChannelOffsets offsetsForSelection(const std::optional<DeviceRecord>& rec
     return o;
 }
 
-// True when a and b differ only in the CAL defaults (trims, LINK, per-channel offsets) and the version they bump: a project
+// True when a and b differ only in the CAL defaults (trims, LINK, per-channel offsets), the return polarity and the version they bump: a project
 // snapshot that differs from the library record only there is "DefaultsChanged", not a different device.
 bool sameExceptDefaults(const DeviceRecord& a, const DeviceRecord& b);
 

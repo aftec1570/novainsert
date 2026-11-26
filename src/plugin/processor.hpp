@@ -76,6 +76,7 @@ public:
     std::vector<ni::gui::DeviceListEntry> deviceList() const;   // library order; channels owned by another instance are "in use"
     void pressCal (int action);                                 // 1 = SEND CAL toggle, 2 = RETURN CAL, 3 = cancel
     void applyDeviceDefaults();                                 // the library record's trims, LINK and offsets → this instance
+    bool setPolarityInverted (bool inverted);                   // main panel switch / "Set polarity switch": the running unit's record (library + snapshot), then the engine
     void setConverterCal (float sendDbuAt0dBFS, float returnDbuAt0dBFS, float vuRefDbfs, std::optional<float> outboardMaxInDbu);
     void setOffsets (std::array<float, 2> send, std::array<float, 2> ret);
     ni::plugin::CalStatus calStatus() const { return cal_ ? cal_->status() : ni::plugin::CalStatus::Idle; }

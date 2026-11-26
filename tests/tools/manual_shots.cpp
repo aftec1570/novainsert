@@ -209,6 +209,11 @@ int main (int argc, char** argv)
     ant.state = ni::engine::State::UnsupportedHost; ant.reason = ni::engine::Reason::AnticipativeOn; ant.anticipativeViolationTracks = { "Drum Bus" };
     save (body (p, ant, 2, kSilent, kSilent), "anticipative.png");
 
+    // 9b. return measured inverted while the polarity switch is on normal: flag plus one-click button
+    auto pol = base (true);
+    pol.polarityDetectedInverted = true;
+    save (body (p, pol, 2, sine (-21.0f, -19.5f), sine (-20.5f, -20.0f)), "polarity_flag.png");
+
     // 10. Effect mode: driver-reported loop
     auto eff = base (true);
     eff.deviceName = "Bricasti M7"; eff.mode = ni::engine::Mode::Effect; eff.physLoop = 260; eff.reportedPdc = 512;

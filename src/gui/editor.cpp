@@ -34,6 +34,7 @@ NovaInsertEditor::NovaInsertEditor (NovaInsertProcessor& p) : juce::AudioProcess
     panel_.onSelectDevice = [this] (int d) { proc_.selectDeviceFromGui (d); };
     panel_.onCal = [this] (int a) { proc_.pressCal (a); };
     panel_.onReapply = [this] { proc_.reapplyAnticipativeFromGui(); };
+    panel_.onPolarity = [this] (bool inverted) { proc_.setPolarityInverted (inverted); refreshSlow(); };   // a failed write (read-only library) snaps the switch back
     panel_.onRecalibrate = [this] { proc_.recalibrateFromGui(); };
     panel_.setup.onConverter = [this] (const SetupPanel::Converter& c) { proc_.setConverterCal (c.sendDbu, c.returnDbu, c.vuRef, c.outboardMax); };
     panel_.setup.onOffsets = [this] (std::array<float, 2> s, std::array<float, 2> r) { proc_.setOffsets (s, r); };

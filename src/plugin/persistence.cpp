@@ -121,6 +121,7 @@ void ProjectRestore::adopt(const DeviceRecord& lib)
     d.sendDbuAt0dBFS = lib.sendDbuAt0dBFS; d.returnDbuAt0dBFS = lib.returnDbuAt0dBFS; d.vuRefDbfs = lib.vuRefDbfs;
     d.outboardMaxInDbu = lib.outboardMaxInDbu;
     d.sendTrimDb = lib.sendTrimDb; d.returnTrimDb = lib.returnTrimDb; d.link = lib.link;
+    d.polarityInverted = lib.polarityInverted;   // the polarity switch (main panel / PRESET SETUP) reaches the restored instance
     for (int ch = 0; ch < 2; ++ch) { d.sendOffsetDb[ch] = lib.sendOffsetDb[ch]; d.returnOffsetDb[ch] = lib.returnOffsetDb[ch]; }
     DeviceRecord v = d; v.version = lib.version;
     if (v == lib) d.version = lib.version;

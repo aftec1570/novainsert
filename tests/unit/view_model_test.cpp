@@ -375,3 +375,40 @@ TEST_CASE("view model: DriverUnsupported text and driver warnings", "[view_model
     REQUIRE(has(ViewModel::from(nd), "Not delivered by REAPER: input 25"));
     REQUIRE(reasonText(Reason::ChannelNotDelivered).find("Preferences > Audio > Device") != std::string::npos);
 }
+
+// ---- return polarity flag (D2, 1.5.0) ----
+
+TEST_CASE("polarity_flag_logic_detected_inverted_with_the_switch_on_normal_only")
+{
+    using ni::engine::polarityFlag;
+    REQUIRE(polarityFlag(true, false));        // inverted return, switch normal: flag + "Set polarity switch"
+    REQUIRE_FALSE(polarityFlag(true, true));   // inverted return, switch inverted: compensated, no flag
+    REQUIRE_FALSE(polarityFlag(false, false)); // normal return, switch normal
+    REQUIRE_FALSE(polarityFlag(false, true));  // normal return with the switch on: no flag (nothing is claimed about it)
+}
+
+TEST_CASE("polarity_detected_inverted_needs_every_measured_channel")
+{
+    using ni::engine::returnDetectedInverted;
+    const bool none[2] { false, false }, both[2] { true, true }, left[2] { true, false }, right[2] { false, true };
+    REQUIRE_FALSE(returnDetectedInverted(none, true));
+    REQUIRE(returnDetectedInverted(both, true));
+    REQUIRE_FALSE(returnDetectedInverted(left, true));    // one channel only: one switch for both could not repair it
+    REQUIRE_FALSE(returnDetectedInverted(right, true));
+    REQUIRE(returnDetectedInverted(left, false));         // a mono return looks at its one channel
+    REQUIRE_FALSE(returnDetectedInverted(right, false));
+}
+
+TEST_CASE("view_model_polarity_flag_follows_detection_and_switch")
+{
+    auto in = base();
+    REQUIRE_FALSE(ViewModel::from(in).polarityFlag);
+    in.polarityDetectedInverted = true;
+    auto vm = ViewModel::from(in);
+    REQUIRE(vm.polarityFlag);
+    REQUIRE(vm.polarityFlagText == "Return is inverted");
+    in.polarityInverted = true;   // the user (or the one-click button) turned the switch on
+    REQUIRE_FALSE(ViewModel::from(in).polarityFlag);
+    in.polarityInverted = false; in.deviceName.clear();   // no device: nothing to flag
+    REQUIRE_FALSE(ViewModel::from(in).polarityFlag);
+}

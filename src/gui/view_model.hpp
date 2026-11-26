@@ -135,6 +135,8 @@ struct ViewInputs
     bool sendStereo = false, retStereo = false;        // effective widths (what the loop, meters and readouts run on)
     bool recSendStereo = false, recReturnStereo = false;   // record widths: a STEREO direction shows its STEREO | L | R selector
     bool link = false, defaultsChanged = false;
+    bool polarityInverted = false;             // the unit's polarity switch (device record): the return is multiplied by -1
+    bool polarityDetectedInverted = false;     // the last successful measurement found the return inverted
     float sendDbuAt0dBFS = 24.0f, returnDbuAt0dBFS = 24.0f, vuRefDbfs = -20.0f;
     std::optional<float> outboardMaxInDbu;
     bool meterDbu = true;                      // meter unit for BOTH sides (per-process rocker, user 2026-11-05): dBu, else dBFS
@@ -162,6 +164,8 @@ struct ViewModel
     float sendSubScaleOffset = -20.0f, returnSubScaleOffset = -20.0f;   // dBFS sub-scale = VU + offset
     std::vector<std::pair<std::string, bool>> deviceItems;               // text, enabled
     std::string noteText;                                                 // neutral note (not a warning)
+    bool polarityFlag = false;                                            // "return is inverted" + the one-click "Set polarity switch" (D2)
+    std::string polarityFlagText;
     std::string progressText;                                             // why the track is silent right now (user 2026-11-05)
 
     static std::string calStatusText(int s)
@@ -286,6 +290,11 @@ struct ViewModel
         vm.returnScaleLabel = "RETURN \u00b7 0 VU = " + ref;
         for (const auto& d : in.devices)
             vm.deviceItems.emplace_back(d.inUseBy.empty() ? d.name : d.name + " \u2013 in use: " + d.inUseBy, d.inUseBy.empty());
+        if (!noDevice && engine::polarityFlag(in.polarityDetectedInverted, in.polarityInverted))
+        {
+            vm.polarityFlag = true;
+            vm.polarityFlagText = "Return is inverted";
+        }
         if (in.defaultsChanged) vm.noteText = "Device defaults changed";
         // the track is muted while the loop is being measured and until REAPER has taken the new delay: say so
         if (in.state == engine::State::Measuring)            vm.progressText = "Latency check in progress \u2013 output muted until the loop is locked";

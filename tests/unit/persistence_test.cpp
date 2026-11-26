@@ -52,6 +52,43 @@ TEST_CASE("persistence_round_trip_equality")
     REQUIRE(back->calibSnapshot->version == 2);
 }
 
+TEST_CASE("persistence_snapshot_carries_the_return_polarity")
+{
+    InstanceState s = sample();
+    s.deviceSnapshot->polarityInverted = true;
+    const auto blob = serialize(s);
+    const auto back = deserialize(blob.getData(), blob.getSize());
+    REQUIRE(back.has_value());
+    REQUIRE(back->deviceSnapshot->polarityInverted);
+    REQUIRE(back->deviceSnapshot == s.deviceSnapshot);
+}
+
+TEST_CASE("persistence_a_project_saved_before_1_5_0_restores_with_normal_polarity")
+{
+    // the snapshot of a 1.4.x project has no polarity key
+    const char* json = R"({"schema":1,"params":{"device":3},"device":{"id":"pultec","name":"Pultec","sendStereo":false,"returnStereo":false,
+                           "out":[11],"in":[9],"identIn":"Apollo x8p","identOut":"Apollo x8p","mode":0,"version":4}})";
+    const auto back = deserialize(json, std::strlen(json));
+    REQUIRE(back.has_value());
+    REQUIRE(back->deviceSnapshot.has_value());
+    REQUIRE_FALSE(back->deviceSnapshot->polarityInverted);
+}
+
+TEST_CASE("project_restore_adopt_follows_the_polarity_switch")
+{
+    InstanceState s = sample();
+    s.calibSnapshot.reset();
+    ProjectRestore pr;
+    pr.loaded(s, 3);
+    REQUIRE(pr.claim(3) == ProjectRestore::Claim::Restore);
+    DeviceRecord lib = *s.deviceSnapshot;
+    lib.polarityInverted = true; lib.version = 5;   // the switch written to the library by this instance
+    pr.adopt(lib);
+    REQUIRE(pr.device()->polarityInverted);
+    REQUIRE(pr.record(3, std::nullopt)->polarityInverted);   // the restored instance runs it
+    REQUIRE(pr.device()->version == 5);                      // and the snapshot equals the library record again
+}
+
 TEST_CASE("persistence_without_snapshots_round_trips")
 {
     InstanceState s;

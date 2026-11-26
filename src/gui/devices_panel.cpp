@@ -67,6 +67,8 @@ DevicesPanel::DevicesPanel()
     sendMode_.onChange = [this] (int) { changed(); loadForm (edit_); dirty_ = true; };   // the R picker follows the width
     retMode_.onChange = [this] (int) { changed(); loadForm (edit_); dirty_ = true; };
     mode_.onChange = [this] (int) { changed(); };
+    polarity_.onChange = [this] (int) { changed(); };
+    addAndMakeVisible (polarity_);
     addAndMakeVisible (sendMode_);
     addAndMakeVisible (retMode_);
     addAndMakeVisible (mode_);
@@ -108,6 +110,7 @@ DevicesPanel::DevicesPanel()
     name_.setTooltip ("Name: also becomes the FX slot name in REAPER");
     sendMode_.setTooltip ("Send width: MONO uses one output, STEREO a pair");
     retMode_.setTooltip ("Return width: MONO uses one input, STEREO a pair");
+    polarity_.setTooltip ("Return polarity: INVERTED multiplies the return by -1 (both channels), for a unit that inverts the signal. Not automatable");
     mode_.setTooltip ("Mode: INSERT measures the hardware loop; EFFECT uses the driver latency");
     outL_.setTooltip ("Send output (left or mono)");
     outR_.setTooltip ("Send output, right");
@@ -147,6 +150,7 @@ void DevicesPanel::loadForm (const plugin::DeviceRecord& r)
     sendMode_.setSelected (r.sendStereo ? 1 : 0);
     retMode_.setSelected (r.returnStereo ? 1 : 0);
     mode_.setSelected (r.mode == engine::Mode::Effect ? 1 : 0);
+    polarity_.setSelected (r.polarityInverted ? 1 : 0);
     outL_.setSelectedId (r.out[0] + 1, juce::dontSendNotification);
     outR_.setSelectedId (r.sendStereo ? r.out[1] + 1 : 0, juce::dontSendNotification);
     inL_.setSelectedId (r.in[0] + 1, juce::dontSendNotification);
@@ -175,6 +179,7 @@ void DevicesPanel::readForm()
     edit_.sendStereo = sendMode_.selected() == 1;
     edit_.returnStereo = retMode_.selected() == 1;
     edit_.mode = mode_.selected() == 1 ? engine::Mode::Effect : engine::Mode::Insert;
+    edit_.polarityInverted = polarity_.selected() == 1;
     edit_.out[0] = outL_.getSelectedId() - 1; edit_.in[0] = inL_.getSelectedId() - 1;
     edit_.out[1] = edit_.sendStereo ? outR_.getSelectedId() - 1 : -1; edit_.in[1] = edit_.returnStereo ? inR_.getSelectedId() - 1 : -1;
     edit_.sendDbuAt0dBFS = (float) sendDbu_.getValue(); edit_.returnDbuAt0dBFS = (float) returnDbu_.getValue();
@@ -271,6 +276,7 @@ void DevicesPanel::resized()
     sendDbu_.setBounds (row (kCtlX + kCapS, 5, kHalf - kCapS)); returnDbu_.setBounds (row (kCtlX + kHalf + 8 + kCapR, 5, kHalf - kCapR));
     ref_.setBounds (row (kCtlX, 6, kHalf)); refCustom_.setBounds (row (kCtlX + kHalf + 8, 6, kHalf));
     outMaxOn_.setBounds (row (kCtlX, 7, 66)); outMax_.setBounds (row (kCtlX + 68, 7, kHalf));
+    polarity_.setBounds (row (kCtlX, 8, polarity_.idealWidth()).withHeight (24));
     const int bw = 86, by = h - 48;
     done_.setBounds (getWidth() - kPad - bw, by, bw, 34);
     cancel_.setBounds (getWidth() - kPad - 2 * bw - 8, by, bw, 34);
@@ -325,6 +331,7 @@ void DevicesPanel::paint (juce::Graphics& g)
     label (5, "dBu at 0 dBFS");
     label (6, "0 VU reference");
     label (7, "Outboard max");
+    label (8, "Return polarity");
     g.setFont (uiFont (10.0f));
     g.setColour (ink::dim);
     g.drawText ("send", kCtlX, kTop + 5 * kRow, kCapS - 6, 24, juce::Justification::centredLeft);

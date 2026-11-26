@@ -1,12 +1,12 @@
 # NovaInsert User Manual
 
-Version 1.4.4 · November 2026 · REAPER-only VST3 hardware insert for macOS (Apple silicon) · by Hillside Studios, [hillsidestudio.io](https://hillsidestudio.io)
+Version 1.5.0 · November 2026 · REAPER-only VST3 hardware insert for macOS (Apple silicon) · by Hillside Studios, [hillsidestudio.io](https://hillsidestudio.io)
 
 ![NovaInsert in REAPER](img/reaper_window.png)
 
 NovaInsert puts a piece of outboard gear into a REAPER track like any other plug-in. It sends the track to a physical output of your audio interface, takes the return from a physical input, measures the exact round-trip delay through the converters, cables and the device itself, and tells REAPER that delay so the return lines up to the sample. It also keeps the analog levels where the outboard expects them, with VU meters, trims and a one-press level calibration.
 
-This manual covers version 1.4.4. The plug-in is free to use and comes as is, without any warranty. Read the safety notice in chapter 2 before you connect anything.
+This manual covers version 1.5.0. The plug-in is free to use and comes as is, without any warranty. Read the safety notice in chapter 2 before you connect anything.
 
 ## 1. What NovaInsert does
 
@@ -43,7 +43,7 @@ You are responsible for the routing, the monitoring level and the hardware. See 
 
 **Install from the DMG**
 
-1. Open the DMG and double-click "Install NovaInsert 1.4.4.pkg".
+1. Open the DMG and double-click "Install NovaInsert 1.5.0.pkg".
 2. Read and accept the license agreement, then let the installer copy the plug-in to `/Library/Audio/Plug-Ins/VST3`.
 3. The package is signed with an Apple Developer ID and notarized by Apple, so macOS opens it directly without a security prompt.
 4. In REAPER open Options, Preferences, Plug-ins, VST and press "Re-scan". Add "VST3: NovaInsert" to a track.
@@ -61,7 +61,7 @@ Open the editor (any instance), press PRESET SETUP and then NEW:
 3. **Return** – MONO or STEREO, then the physical input channel(s) the return arrives on. A mono return shows one picker; what comes back on it feeds both channels of the track.
 4. Send and return are independent: a mono-in, stereo-out unit is a mono send with a stereo return.
 5. **Mode** – INSERT for compressors, equalisers and other gear that keeps timing; EFFECT for reverbs and delays (chapter 11).
-6. **Interface / dBu at 0 dBFS / 0 VU reference / Outboard max** – the level settings of chapter 10, stored with the preset.
+6. **Interface / dBu at 0 dBFS / 0 VU reference / Outboard max** – the level settings of chapter 10, stored with the preset. **Return polarity** (NORMAL or INVERTED) is the switch for a unit that inverts the signal (chapter 9).
 7. **SAVE** – writes the preset, selects it in this instance and starts the measurement at once. Nothing about latency is stored with a preset: every selection measures the loop again (chapter 7), so a preset is always checked against the hardware as it is now.
 
 ![A new preset](img/devices_new.png)
@@ -105,7 +105,7 @@ Two REAPER details worth knowing. Typing a space into the name field needs "Send
 | 6 | CAL +4 dBu | sets the send trim so the track itself leaves at 0 VU = +4 dBu |
 | 7 | LINK | couples the two trims: more send, less return, same mix level |
 | 8 | CAL (return) | measures the return and sets the return trim to digital unity |
-| 9 | RETURN TRIM | gain after the converter input, −24 to +12 dB |
+| 9 | RETURN TRIM | gain after the converter input, −24 to +12 dB; the Ø INV switch beside the CLIP lamp turns the return polarity (chapter 9) |
 | 10 | MODE | INSERT (measured loop) or EFFECT (driver latency, tails preserved) |
 | 11 | SEND and RETURN | shown for a stereo send / return only: STEREO uses both channels, L or R uses that one side of the unit |
 | 12 | PRESET SETUP | the preset editor: create, edit, duplicate and delete devices (chapter 4) |
@@ -251,6 +251,10 @@ Most outboard expects line level around +4 dBu. A converter aligned to +24 dBu a
 
 If the return clips at the converter the calibration writes nothing and asks you to lower the outboard's output; a trim after the converter cannot undo an overloaded input.
 
+![Return is inverted: flag and SET POLARITY SWITCH](img/polarity_flag.png)
+
+**Return polarity.** Some outboard units, and some cabling, turn the signal upside down: the return is the negative of what was sent. The loop measurement notices this and still locks; it never fails because of polarity. When the measurement finds the return inverted and the polarity switch is on NORMAL, the status line says "Return is inverted" and a button "SET POLARITY SWITCH" appears. One click sets the switch to INVERTED, and the return is turned the right way round from the next audio block on; the flag goes away. The same switch is "Ø INV" in the RETURN strip, and "Return polarity" in PRESET SETUP. It belongs to the preset: it is stored in the device record, saved in the project snapshot, and an older library or project that has no such value loads as NORMAL. The switch multiplies the returned samples by −1 right after capture and before the return trim, in Insert and Effect mode, on both channels of a stereo return together. It adds no latency and it is not a plug-in parameter, so it cannot be automated. The measurement itself always looks at the hardware signal, so it keeps reporting an inverted unit while the switch is on INVERTED; in that case no flag is shown. With a stereo return the flag appears only when both channels are inverted, because the switch turns both.
+
 **What is stored.** A RETURN CAL result is written to the running instance and as the default of the device record, so every new use of that device starts from it. When a project's stored values differ from the library defaults, the status line says "Device defaults changed – see SETUP" and SETUP offers "APPLY DEVICE DEFAULTS"; nothing is applied on its own.
 
 CAL is refused, with a message, while recording, without an owned device, and while a latency measurement is running (a measurement that starts during SEND CAL cancels it). RETURN CAL also needs Insert mode. SEND CAL reports "no track signal within 30 s" when nothing played, and "too quiet or too loud for the trim range" when the needed trim lies outside −24…+12 dB; neither writes anything.
@@ -356,6 +360,7 @@ These appear in REAPER's parameter list, for automation, modulation and paramete
 | Send | Stereo, L, R | the side of a stereo send; a mono send ignores it |
 | Return | Stereo, L, R | the side of a stereo return; a mono return ignores it |
 | Stereo | off/on | follows the record |
+| Return polarity | — | not a parameter: a set-up value of the preset (chapter 9), so it cannot be automated |
 | Send trim, Return trim | −24 … +12 dB | |
 | Link | off/on | |
 | Pre-roll lead-in | off/on | hides the start-gap tip; set it when you render with pre-roll |
@@ -402,7 +407,7 @@ The snapshot means a later edit of the library cannot change how an old project 
 | Loop gain outside the trim range | the return differs from the send by more than the trims can correct | check the unit's gain structure |
 | CAL needs Insert mode / is not available while recording / Select a free device first / Wait for the latency measurement | CAL preconditions | see chapter 9 |
 
-## 19. Limitations of version 1.4.4
+## 19. Limitations of version 1.5.0
 
 - 44.1, 48, 88.2, 96 or 192 kHz (hardware-validated on the Apollo at all five; change the rate only with the transport stopped, every loop then re-measures on its own), REAPER 7.6 or newer (tested on 7.83, 7.84, 7.85 and 7.86), macOS Apple silicon, VST3 only.
 - Presets are stored by position: deleting one shifts the later ones in projects that have not been reopened since (chapter 4).
